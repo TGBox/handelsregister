@@ -1,14 +1,13 @@
-[[source]]
-url = "https://pypi.org/simple"
-verify_ssl = true
-name = "pypi"
-
+# Removed deprecated source.
 [tool.poetry.dependencies]
-python = ">3.6.2,<4"
+python = ">3.7,<4"
 mechanize = "*"
 mechanicalsoup = "*"
+fastapi = "^0.100.0"
+uvicorn = {extras = ["standard"], version = "^0.22.0"}
 
-[tool.poetry.dev-dependencies]
+# Changed line below because the old version was deprecated.
+[tool.poetry.group.dev.dependencies]
 black = "^22.6.0"
 
 [tool.poetry]
