@@ -52,23 +52,25 @@ class HandelsRegister:
         self.cachedir.mkdir(parents=True, exist_ok=True)
 
     def open_startpage(self):
-        self.browser.open("https://www.handelsregister.de", timeout=10)
+        # Changed the initial navigation to the page via mechanize because the syntax seems to have changed since this repository was created.
+        self.browser.open(mechanize.Request("https://www.handelsregister.de/rp_web/erweitertesuche.xhtml", method="POST"), timeout=10)
 
     def companyname2cachename(self, companyname):
-        # map a companyname to a filename, that caches the downloaded HTML, so re-running this script touches the
-        # webserver less often.
-        return self.cachedir / companyname
+        # Sanitize the company name by replacing invalid characters with underscores
+        sanitized_name = re.sub(r'[<>:"/\\|?*]', '_', companyname)
+        return self.cachedir / sanitized_name
 
     def search_company(self):
         cachename = self.companyname2cachename(self.args.schlagwoerter)
-        if self.args.force==False and cachename.exists():
+        if self.args.force == False and cachename.exists():
             with open(cachename, "r") as f:
                 html = f.read()
                 print("return cached content for %s" % self.args.schlagwoerter)
         else:
             # TODO implement token bucket to abide by rate limit
             # Use an atomic counter: https://gist.github.com/benhoyt/8c8a8d62debe8e5aa5340373f9c509c7
-            response_search = self.browser.follow_link(text="Advanced search")
+            # line below is not needed anymore.
+            #response_search = self.browser.follow_link(text="Advanced search")
 
             if self.args.debug == True:
                 print(self.browser.title())
@@ -79,6 +81,9 @@ class HandelsRegister:
             so_id = schlagwortOptionen.get(self.args.schlagwortOptionen)
 
             self.browser["form:schlagwortOptionen"] = [str(so_id)]
+            
+            if self.args.registerNummer: 
+                self.browser["form:registerNummer"] = self.args.registerNummer
 
             response_result = self.browser.submit()
 
@@ -90,10 +95,9 @@ class HandelsRegister:
                 f.write(html)
 
             # TODO catch the situation if there's more than one company?
-            # TODO get all documents attached to the exact company
-            # TODO parse useful information out of the PDFs
+            # !TODO get all documents attached to the exact company
+            # !TODO parse useful information out of the PDFs
         return get_companies_in_searchresults(html)
-
 
 def parse_result(result):
     cells = []
@@ -118,9 +122,9 @@ def parse_result(result):
 def pr_company_info(c):
     for tag in ('name', 'court', 'state', 'status'):
         print('%s: %s' % (tag, c.get(tag, '-')))
-    print('history:')
-    for name, loc in c.get('history'):
-        print(name, loc)
+    # print('history:')
+    # for name, loc in c.get('history'):
+    #     print(name, loc)
 
 def get_companies_in_searchresults(html):
     soup = BeautifulSoup(html, 'html.parser')
@@ -138,39 +142,44 @@ def get_companies_in_searchresults(html):
     return results
 
 def parse_args():
-# Parse arguments
+    # Parse arguments
     parser = argparse.ArgumentParser(description='A handelsregister CLI')
     parser.add_argument(
-                          "-d",
-                          "--debug",
-                          help="Enable debug mode and activate logging",
-                          action="store_true"
-                        )
+        "-d",
+        "--debug",
+        help="Enable debug mode and activate logging",
+        action="store_true"
+    )
     parser.add_argument(
-                          "-f",
-                          "--force",
-                          help="Force a fresh pull and skip the cache",
-                          action="store_true"
-                        )
+        "-f",
+        "--force",
+        help="Force a fresh pull and skip the cache",
+        action="store_true"
+    )
     parser.add_argument(
-                          "-s",
-                          "--schlagwoerter",
-                          help="Search for the provided keywords",
-                          required=True,
-                          default="Gasag AG" # TODO replace default with a generic search term
-                        )
+        "-s",
+        "--schlagwoerter",
+        help="Search for the provided keywords",
+        required=True,
+        default="" # TODO replace default with a generic search term
+    )
     parser.add_argument(
-                          "-so",
-                          "--schlagwortOptionen",
-                          help="Keyword options: all=contain all keywords; min=contain at least one keyword; exact=contain the exact company name.",
-                          choices=["all", "min", "exact"],
-                          default="all"
-                        )
+        "-so",
+        "--schlagwortOptionen",
+        help="Keyword options: all=contain all keywords; min=contain at least one keyword; exact=contain the exact company name.",
+        choices=["all", "min", "exact"],
+        default="all"
+    )
+    parser.add_argument(
+        "-n",
+        "--registerNummer",
+        help="Add registry number to improve search results",
+        required=False
+    )
     args = parser.parse_args()
 
-
     # Enable debugging if wanted
-    if args.debug == True:
+    if args.debug:
         import logging
         logger = logging.getLogger("mechanize")
         logger.addHandler(logging.StreamHandler(sys.stdout))
