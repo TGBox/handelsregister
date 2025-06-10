@@ -160,8 +160,7 @@ def parse_args():
         "-s",
         "--schlagwoerter",
         help="Search for the provided keywords",
-        required=True,
-        default="" # TODO replace default with a generic search term
+        required=True
     )
     parser.add_argument(
         "-so",
