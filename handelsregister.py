@@ -81,9 +81,6 @@ class HandelsRegister:
             so_id = schlagwortOptionen.get(self.args.schlagwortOptionen)
 
             self.browser["form:schlagwortOptionen"] = [str(so_id)]
-            
-            if self.args.registerNummer: 
-                self.browser["form:registerNummer"] = self.args.registerNummer
 
             response_result = self.browser.submit()
 
@@ -168,12 +165,6 @@ def parse_args():
         help="Keyword options: all=contain all keywords; min=contain at least one keyword; exact=contain the exact company name.",
         choices=["all", "min", "exact"],
         default="all"
-    )
-    parser.add_argument(
-        "-n",
-        "--registerNummer",
-        help="Add registry number to improve search results",
-        required=False
     )
     args = parser.parse_args()
 
