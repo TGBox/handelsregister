@@ -4,8 +4,8 @@ python = ">3.7,<4"
 mechanize = "*"
 selenium = "*"
 mechanicalsoup = "*"
-fastapi = "^0.100.0"
-uvicorn = {extras = ["standard"], version = "^0.22.0"}
+fastapi = ">0.100.0"
+uvicorn = {extras = ["standard"], version = ">0.22.0"}
 
 # Changed line below because the old version was deprecated.
 [tool.poetry.group.dev.dependencies]
@@ -13,7 +13,7 @@ black = "^22.6.0"
 
 [tool.poetry]
 name = "handelsregister"
-version = "0.2.1"
+version = "0.3.1"
 description = "Adapted fork of the BundesAPI Handelsregister repo."
 authors = ["BundesAPI <kontakt@bund.dev>"]
 
