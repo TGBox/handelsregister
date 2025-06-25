@@ -1,38 +1,37 @@
-# Removed deprecated source.
-[tool.poetry.dependencies]
-python = ">3.7,<4"
-mechanize = "*"
-selenium = "*"
-mechanicalsoup = "*"
-fastapi = ">0.100.0"
-uvicorn = {extras = ["standard"], version = ">0.22.0"}
-
-# Changed line below because the old version was deprecated.
-[tool.poetry.group.dev.dependencies]
-black = "^22.6.0"
-
 [tool.poetry]
 name = "handelsregister"
 version = "0.3.1"
 description = "Adapted fork of the BundesAPI Handelsregister repo."
-authors = ["BundesAPI <kontakt@bund.dev>"]
+authors = ["BundesAPI <kontakt@bund.dev>", "Daniel Rösch <daniel.roesch91@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.13"
+mechanize = "^0.4.10"
+selenium = "^4.22.0"
+mechanicalsoup = "^1.3.0"
+fastapi = "^0.111.0"
+uvicorn = {extras = ["standard"], version = "^0.30.1"}
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.4.2"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^8.2.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.tox]
-legacy_tox_ini = """
-[tox]
-envlist = py36,py37,py38,py310
-isolated_build = True
-
-[tox:.package]
-basepython = python3
+min_version = "4.0"
+isolated_build = true
+env_list = ["py313"]
 
 [testenv]
-deps = pytest
-usedevelop = true
+# Enabling Tox to install the dependencies via poetry.
+deps = 
+    poetry
 commands =
-    pytest
-"""
+    poetry install -v
+    poetry run pytest tests/
