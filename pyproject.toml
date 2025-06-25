@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "handelsregister"
-version = "0.3.1"
+version = "0.4.1"
 description = "Adapted fork of the BundesAPI Handelsregister repo."
 authors = ["BundesAPI <kontakt@bund.dev>", "Daniel Rösch <daniel.roesch91@gmail.com>"]
 readme = "README.md"
@@ -24,14 +24,20 @@ requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.tox]
-min_version = "4.0"
-isolated_build = true
-env_list = ["py313"]
+legacy_tox_ini = """
+[tox]
+envlist = py36,py37,py38,py310,py313
+isolated_build = True
+
+[tox:.package]
+basepython = python3
 
 [testenv]
-# Enabling Tox to install the dependencies via poetry.
-deps = 
-    poetry
+deps = pytest
+usedevelop = true
 commands =
-    poetry install -v
-    poetry run pytest tests/
+    pytest
+"""
+env_list = ["py313", "py310"]
+min_version = "4.0"
+isolated_build = true
