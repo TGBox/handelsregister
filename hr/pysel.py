@@ -242,7 +242,8 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
         wait = WebDriverWait(driver, 10)
         try:
             plz = wait.until(EC.element_to_be_clickable((By.ID, post_code)))
-            plz.send_keys(po)
+            if po:
+                plz.send_keys(po)
         except TimeoutException:
             print("Es wurde nicht rechtzeitig eine Textbox für die Postleitzahleneingabe gefunden.")
             plz = ""
@@ -251,7 +252,8 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
         wait = WebDriverWait(driver, 10)
         try:
             ort = wait.until(EC.element_to_be_clickable((By.ID, city)))
-            ort.send_keys(ci)
+            if ci:
+                ort.send_keys(ci)
         except TimeoutException:
             print("Es wurde nicht rechtzeitig eine Textbox für die Ortseingabe gefunden.")
             ort = ""
@@ -260,7 +262,8 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
         wait = WebDriverWait(driver, 10)
         try:
             strt = wait.until(EC.element_to_be_clickable((By.ID, street)))
-            strt.send_keys(st)
+            if st:
+                strt.send_keys(st)
         except TimeoutException:
             print("Es wurde nicht rechtzeitig eine Textbox für die Straßennameneingabe gefunden.")
             strt = ""
@@ -268,11 +271,13 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
 
         wait = WebDriverWait(driver, 10)
         try:
-            subBtn = wait.until(EC.element_to_be_clickable((By.ID, submitBtn)))
-            subBtn.click()
-            
-            wait = WebDriverWait(driver, 10)
-            
+            # Wir warten nur noch darauf, dass das Element im DOM existiert (nicht zwingend klickbar ist)
+            subBtn = wait.until(EC.presence_of_element_located((By.ID, submitBtn)))
+            # Führe den Klick mit JavaScript aus
+            driver.execute_script("arguments[0].click();", subBtn)
+            print("Suche-Button wurde via JavaScript geklickt.")
+            # Gib der Seite einen Moment Zeit, um die Ergebnisse zu laden
+            wait = WebDriverWait(driver, 10) 
         except TimeoutException:
             print("Es wurde nicht rechtzeitig ein Submitbutton gefunden.")
             subBtn = ""
@@ -326,11 +331,17 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
             driver.quit()
         if os.path.exists("temp_page.html"):
             os.remove("temp_page.html")
-        
+            
+        downloaded_files = os.listdir(dl_path)
+        if not downloaded_files:
+            print(f"Fehler: Download fehlgeschlagen. Keine Datei im Verzeichnis '{dl_path}' gefunden.")
+            return # Beendet die Funktion hier, da es nichts zu verarbeiten gibt
+
+        # --- Nur wenn Dateien da sind, geht es hier weiter ---
         print("Daten wurden heruntergeladen. Extrahieren der Geschäftsführer und Prokuristen wird gestartet...")
-        # Retrieving the filepath of the downloaded document and parsing it. 
-        pdfFileName = os.listdir(dl_path)[0]
+        pdfFileName = downloaded_files[0]
         pdfFilePath = os.path.join(dl_path, pdfFileName)
+        managers = extract_management_data(pdfFilePath)
         managers = extract_management_data(pdfFilePath)
         companyName = extract_company_name(pdfFilePath)
         companyAddress = extract_company_address(pdfFilePath)

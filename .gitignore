@@ -32,3 +32,6 @@ htmlcov/
 
 # Local configuration files.
 .env.*
+
+# BundesAPI download folder.
+download/
