@@ -335,6 +335,7 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
         companyName = extract_company_name(pdfFilePath)
         companyAddress = extract_company_address(pdfFilePath)
 
+        #todo: Hier muss dann noch die tatsächliche Interaktion mit den Daten eingebaut werden. Aktuell werden sie zu Testzwecken nur auf der Konsole ausgegeben.
         # Iteration over the resulting values to print them to console.
         if managers:  # Only take lists that are non-empty.
             print("Gefundene Personen in dieser Liste:")
