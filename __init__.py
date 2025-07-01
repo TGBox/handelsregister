@@ -1,0 +1,1 @@
+from .handelsregister import get_companies_in_searchresults, HandelsRegister
