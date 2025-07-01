@@ -1,5 +1,5 @@
 import pytest
-from handelsregister import get_companies_in_searchresults,HandelsRegister
+from hr import get_companies_in_searchresults,HandelsRegister
 import argparse
 
 def test_parse_search_result():

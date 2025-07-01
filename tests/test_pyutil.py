@@ -1,7 +1,7 @@
 # test_pyutil.py (ANGEPASST FÜR DIRECT INJECTION)
 
 import pytest
-import pyutil
+from hr import pyutil
 
 # ------------------- #
 # -- HILFS-FIXTURES -- #
@@ -79,9 +79,9 @@ def test_extract_management_data_with_prokuristen(sample_pdf_text):
 # --- Test für die Hauptfunktion (bleibt gleich, da sie die anderen mockt) ---
 
 def test_extract_company_data_from_pdf_integration(mocker):
-    mocker.patch("pyutil.extract_company_name", return_value="Testfirma GmbH")
-    mocker.patch("pyutil.extract_company_address", return_value="Musterstraße 1")
-    mocker.patch("pyutil.extract_management_data", return_value=["Max Mustermann"])
+    mocker.patch("hr.pyutil.extract_company_name", return_value="Testfirma GmbH")
+    mocker.patch("hr.pyutil.extract_company_address", return_value="Musterstraße 1")
+    mocker.patch("hr.pyutil.extract_management_data", return_value=["Max Mustermann"])
 
     result = pyutil.extract_company_data_from_pdf("dummy.pdf")
 
