@@ -4,6 +4,7 @@ version = "0.5.1"
 description = "Adapted fork of the BundesAPI Handelsregister repo with additional methods for usage in mailVerify."
 authors = ["BundesAPI <kontakt@bund.dev>", "Daniel Rösch <daniel.roesch91@gmail.com>"]
 readme = "README.md"
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "~3.12"
@@ -29,7 +30,7 @@ build-backend = "poetry.core.masonry.api"
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py36,py37,py38,py310,py313
+envlist = py36,py37,py38,py310,py312
 isolated_build = True
 
 [tox:.package]
@@ -41,6 +42,6 @@ usedevelop = true
 commands =
     pytest
 """
-env_list = ["py313", "py310"]
+env_list = ["py312", "py310"]
 min_version = "4.0"
 isolated_build = true
