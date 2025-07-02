@@ -1,10 +1,10 @@
-# test_pyutil.py (ANGEPASST FÜR DIRECT INJECTION)
+# Adjusted to utilize the direct injection that was added to the functions!
 
 import pytest
 from hr import pyutil
 
 # ------------------- #
-# -- HILFS-FIXTURES -- #
+# -- MOCK-FIXTURES -- #
 # ------------------- #
 
 @pytest.fixture
@@ -38,11 +38,11 @@ def text_without_data() -> str:
     """Eine Fixture mit Text, in dem keine der gesuchten Daten vorkommen."""
     return "Dies ist ein irrelevanter Text ohne Firmen- oder Managementdaten."
 
-# --------------------- #
-# -- TESTS FÜR JEDE FUNKTION -- #
-# --------------------- #
+# ------------------------- #
+# -- Tests for functions -- #
+# ------------------------- #
 
-# --- Tests für extract_company_name ---
+# --- Tests for extract_company_name ---
 
 def test_extract_company_name_success(sample_pdf_text):
     """Testet den Erfolgsfall, indem der Text direkt übergeben wird."""
@@ -54,14 +54,14 @@ def test_extract_company_name_not_found(text_without_data):
     result = pyutil.extract_company_name("dummy.pdf", _test_text=text_without_data)
     assert result is None
 
-# --- Tests für extract_company_address ---
+# --- Tests for extract_company_address ---
 
 def test_extract_company_address_success(sample_pdf_text):
     """Testet die erfolgreiche Extraktion der Adresse."""
     result = pyutil.extract_company_address("dummy.pdf", _test_text=sample_pdf_text)
     assert result == "Musterstraße 1, 12345 Musterstadt"
 
-# --- Tests für extract_management_data ---
+# --- Tests for extract_management_data ---
 
 def test_extract_management_data_ceos_only(sample_pdf_text):
     """Testet, ob nur die Geschäftsführer korrekt extrahiert werden."""
@@ -76,7 +76,7 @@ def test_extract_management_data_with_prokuristen(sample_pdf_text):
     assert "Prokurist, Peter" in result
     assert len(result) == 3
 
-# --- Test für die Hauptfunktion (bleibt gleich, da sie die anderen mockt) ---
+# --- Test for main function ---
 
 def test_extract_company_data_from_pdf_integration(mocker):
     mocker.patch("hr.pyutil.extract_company_name", return_value="Testfirma GmbH")

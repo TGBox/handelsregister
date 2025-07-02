@@ -87,9 +87,13 @@ class HandelsRegister:
             if self.args.debug == True:
                 print(self.browser.title())
 
-            html = response_result.read().decode("utf-8")
-            with open(cachename, "w") as f:
-                f.write(html)
+            if response_result is not None:
+                html = response_result.read().decode("utf-8")
+                with open(cachename, "w") as f:
+                    f.write(html)
+            else:
+                print("Error: Form submission failed, no response received.")
+                html = ""
 
             # TODO catch the situation if there's more than one company?
             # !TODO get all documents attached to the exact company
@@ -129,13 +133,18 @@ def get_companies_in_searchresults(html):
     #print('grid: %s', grid)
   
     results = []
-    for result in grid.find_all('tr'):
-        a = result.get('data-ri')
-        if a is not None:
-            index = int(a)
-            #print('r[%d] %s' % (index, result))
-            d = parse_result(result)
-            results.append(d)
+    from bs4.element import Tag
+    if grid is not None and isinstance(grid, Tag):
+        for result in grid.find_all('tr'):
+            if isinstance(result, Tag):
+                a = result.get('data-ri')
+                if a is not None:
+                    index = int(str(a))
+                    #print('r[%d] %s' % (index, result))
+                    d = parse_result(result)
+                    results.append(d)
+    else:
+        print("No results table found in the HTML or grid is not a valid table element.")
     return results
 
 def parse_args():

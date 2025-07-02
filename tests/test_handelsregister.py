@@ -1,4 +1,3 @@
-import pytest
 from hr import get_companies_in_searchresults,HandelsRegister
 import argparse
 
