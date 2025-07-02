@@ -23,8 +23,8 @@ Musterstadt
 Musterstraße 1, 12345 Musterstadt
 
 4. b) Vorstand, Leitungsorgan, geschäftsführende Direktoren, persönlich haftender Gesellschafter
-Geschäftsführer: Mustermann, Max
-Geschäftsführer: Musterfrau, Erika
+Geschäftsführer: Mustermann, Max, Musterhausen, *01.03.1988
+Geschäftsführer: Musterfrau, Erika, Musterdorf, *29.11.1945
 
 5. Prokura:
 Einzelprokura: Prokurist, Peter
@@ -46,35 +46,27 @@ def text_without_data() -> str:
 
 def test_extract_company_name_success(sample_pdf_text):
     """Testet den Erfolgsfall, indem der Text direkt übergeben wird."""
-    result = pyutil.extract_company_name("dummy.pdf", _test_text=sample_pdf_text)
+    result = pyutil.extract_company_name(full_text=sample_pdf_text)
     assert result == "Testfirma GmbH"
 
 def test_extract_company_name_not_found(text_without_data):
     """Testet den 'nicht gefunden'-Fall."""
-    result = pyutil.extract_company_name("dummy.pdf", _test_text=text_without_data)
-    assert result is None
+    result = pyutil.extract_company_name(full_text=text_without_data)
+    assert result is ""
 
 # --- Tests for extract_company_address ---
 
 def test_extract_company_address_success(sample_pdf_text):
     """Testet die erfolgreiche Extraktion der Adresse."""
-    result = pyutil.extract_company_address("dummy.pdf", _test_text=sample_pdf_text)
+    result = pyutil.extract_company_address(full_text=sample_pdf_text)
     assert result == "Musterstraße 1, 12345 Musterstadt"
 
 # --- Tests for extract_management_data ---
 
-def test_extract_management_data_ceos_only(sample_pdf_text):
+def test_extract_management_data(sample_pdf_text):
     """Testet, ob nur die Geschäftsführer korrekt extrahiert werden."""
-    result = pyutil.extract_management_data("dummy.pdf", fetch_ceos_only=True, _test_text=sample_pdf_text)
+    result = pyutil.extract_management_data(full_text=sample_pdf_text)
     assert result == ["Mustermann, Max", "Musterfrau, Erika"]
-
-def test_extract_management_data_with_prokuristen(sample_pdf_text):
-    """Testet, ob Geschäftsführer UND Prokuristen korrekt extrahiert werden."""
-    result = pyutil.extract_management_data("dummy.pdf", fetch_ceos_only=False, _test_text=sample_pdf_text)
-    assert "Mustermann, Max" in result
-    assert "Musterfrau, Erika" in result
-    assert "Prokurist, Peter" in result
-    assert len(result) == 3
 
 # --- Test for main function ---
 
