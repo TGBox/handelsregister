@@ -9,7 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 import time
-import os
+from pathlib import Path,PurePath
 import argparse
 
 # ! Second adaptation of selenium_handelsregister.py - WIP
@@ -127,11 +127,10 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
         st (str): the name of the street (and possibly the house number)
         po (str): the post code of the city
     """
-    # todo: replace with best practice alternative.
-    # os.getcwd() refers to the active directory in windows. (= our root folder in the project.) => Modified to give each request its own download folder.
-    dl_path = os.path.join(os.getcwd(), "download", s)
-    if not os.path.isdir(dl_path): # Creating the folder; but only if it does not exist yet.
-        os.makedirs(dl_path)
+    # Save each entry into its own download folder.
+    dl_path = Path.joinpath(Path.cwd(), "download", s)
+    if not Path.is_dir(dl_path): # Creating the folder; but only if it does not exist yet.
+        Path.mkdir(dl_path)
 
     # Chrome Options.
     chrome_options = webdriver.ChromeOptions()
@@ -326,13 +325,12 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
         # ! Wenn die Zeile unter dieser nicht auskommentiert ist, dann muss der Browser manuell geschlossen werden.
         #input("Drücke Enter, um den Browser zu schließen...") # Zum Debuggen
         
-        # todo: replace with pathlib best practice alternative! https://realpython.com/python-pathlib/ 
         if 'driver' in locals():
             driver.quit()
-        if os.path.exists("temp_page.html"):
-            os.remove("temp_page.html")
+        if Path("temp_page.html").exists():
+            Path("temp_page.html").unlink()
             
-        downloaded_files = os.listdir(dl_path)
+        downloaded_files = list(Path(dl_path).iterdir())
         if not downloaded_files:
             print(f"Fehler: Download fehlgeschlagen. Keine Datei im Verzeichnis '{dl_path}' gefunden.")
             return # Beendet die Funktion hier, da es nichts zu verarbeiten gibt
@@ -340,11 +338,10 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
         # --- Nur wenn Dateien da sind, geht es hier weiter ---
         print("Daten wurden heruntergeladen. Extrahieren der Geschäftsführer und Prokuristen wird gestartet...")
         pdfFileName = downloaded_files[0]
-        pdfFilePath = os.path.join(dl_path, pdfFileName)
-        managers = extract_management_data(pdfFilePath)
-        managers = extract_management_data(pdfFilePath)
-        companyName = extract_company_name(pdfFilePath)
-        companyAddress = extract_company_address(pdfFilePath)
+        pdfFilePath = PurePath.joinpath(dl_path, pdfFileName)
+        managers = extract_management_data(str(pdfFilePath))
+        companyName = extract_company_name(str(pdfFilePath))
+        companyAddress = extract_company_address(str(pdfFilePath))
 
         #todo: Hier muss dann noch die tatsächliche Interaktion mit den Daten eingebaut werden. Aktuell werden sie zu Testzwecken nur auf der Konsole ausgegeben.
         # Iteration over the resulting values to print them to console.

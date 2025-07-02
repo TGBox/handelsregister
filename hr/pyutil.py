@@ -1,4 +1,4 @@
-# pyutil.py (ANGEPASST FÜR BESSERE TESTBARKEIT)
+# Adjusted methods to allow for easier tests!
 
 from dataclasses import dataclass
 import re
