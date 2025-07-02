@@ -12,98 +12,124 @@ class CompanyPdfData:
     address: str
 
 def extract_company_data_from_pdf(pdf_path: str, _test_text: Optional[str] = None) -> CompanyPdfData:
-    tmp_name = extract_company_name(pdf_path, _test_text=_test_text)
-    tmp_address = extract_company_address(pdf_path, _test_text=_test_text)
-    ceos = extract_management_data(pdf_path, True, _test_text=_test_text)
+    """
+    Main function to extract company data from the text of a Handelsregister PDF.
+
+    This function orchestrates the extraction of the company name, address, and
+    management personnel (CEOs, partners, etc.) by calling specialized functions.
+
+    Args:
+        pdf_path: The path to the PDF file that was downloaded from the Handelsregister BundesAPI.
+
+    Returns:
+        A CompanyPdfData object containing the extracted information.
+    """
+    full_text = ""
+    if _test_text:
+        full_text = _test_text
+    else:
+        try:
+            with fitz.open(pdf_path) as doc:
+                for page in doc:
+                    if isinstance(page, fitz.Page):
+                        full_text += page.get_text() # type: ignore
+        except Exception as e:
+            print(f"Fehler beim Öffnen oder Lesen der PDF-Datei: {e}")
+            
+    
+    tmp_name = extract_company_name(full_text)
+    tmp_address = extract_company_address(full_text)
+    tmp_ceos = extract_management_data(full_text)
+    ceos = []
     name = ""
     address = ""
+    if tmp_ceos:
+        ceos = tmp_ceos
     if tmp_name:
         name = tmp_name
     if tmp_address:
         address = tmp_address
     return CompanyPdfData(ceos, name, address)
 
-def extract_management_data(pdf_path: str, fetch_ceos_only: bool = False, _test_text: Optional[str] = None) -> List[str]:
-    full_text = ""
-    if _test_text:
-        full_text = _test_text
-    else:
-        try:
-            with fitz.open(pdf_path) as doc:
-                for page in doc:
-                    if isinstance(page, fitz.Page):
-                        full_text += page.get_text() # type: ignore
-        except Exception as e:
-            print(f"Fehler beim Öffnen oder Lesen der PDF-Datei: {e}")
-            return []
+def extract_management_data(full_text: str) -> List[str]:
+    """
+    Extracts the names of managers (Geschäftsführer, Partner, etc.) from the text.
 
-    geschaeftsfuehrer_block_regex = re.compile(r"b\) Vorstand, Leitungsorgan.*?5\.", re.DOTALL)
-    geschaeftsfuehrer_block = geschaeftsfuehrer_block_regex.search(full_text)
+    It first identifies the block of text containing management information and
+    then extracts each person's name from that block.
+
+    Args:
+        full_text: The text content of the Handelsregister excerpt.
+
+    Returns:
+        A list of names of the management personnel.
+    """
+    # This regex identifies the section listing the management personnel.
+    # It starts with keywords like "Vorstand" or "Partner" and ends before the next
+    # numbered section (e.g., "5. Prokura:", "4. a) Rechtsform:").
+    # This is more flexible than the original hardcoded pattern.
+    section_regex = re.compile(
+        r"b\)\s*(?:Vorstand, Leitungsorgan|Partner, Vertretungsberechtigte).*?(?=\n\s*\d\.\s)",
+        re.DOTALL
+    )
+    management_section = section_regex.search(full_text)
+
+    if not management_section:
+        return []
+
+    section_text = management_section.group(0)
+
+    # This regex finds all individual person entries within the management section.
+    # It looks for lines that contain a name followed by a date of birth (*dd.mm.yyyy),
+    # which is a reliable pattern for these entries.
+    # It correctly captures names even when they have titles or multiple first names.
+    # The 're.MULTILINE' flag allows '^' to match the start of each line.
+    person_regex = re.compile(
+        r"^\s*(?:(?:Einzelvertretungsberechtigt|Geschäftsführer|Partner):?)?\s*(.*?,\s*.*?),\s*.*?\s*\*\d{2}\.\d{2}\.\d{4}",
+        re.MULTILINE
+    )
     
-    geschaeftsfuehrer_list = []
-    if geschaeftsfuehrer_block:
-        block_text = geschaeftsfuehrer_block.group(0)
-        gf_pattern = re.compile(r"Geschäftsführer:\s*(.*)")
-        found_geschaeftsfuehrer = gf_pattern.findall(block_text)
-        for gf in found_geschaeftsfuehrer:
-            geschaeftsfuehrer_list.append(gf.strip())
-
-    if not fetch_ceos_only:
-        prokura_block_regex = re.compile(r"5\.\s*Prokura:(.*?)6\.\s*a\)", re.DOTALL)
-        prokura_block = prokura_block_regex.search(full_text)
-        
-        prokuristen_list = []
-        if prokura_block:
-            block_text = prokura_block.group(1).strip()
-            if block_text and '---' not in block_text:
-                prokura_pattern = re.compile(r"(Einzelprokura|Gesamtprokura):\s*(.*)")
-                found_prokuristen = prokura_pattern.findall(block_text)
-                for prok in found_prokuristen:
-                    prokuristen_list.append(prok[1].strip())
-        geschaeftsfuehrer_list.extend(prokuristen_list)
-        
-    return geschaeftsfuehrer_list
+    found_persons = person_regex.findall(section_text)
     
-def extract_company_name(pdf_path: str, _test_text: Optional[str] = None) -> Optional[str]:
-    full_text = ""
-    if _test_text:
-        full_text = _test_text
-    else:
-        try:
-            with fitz.open(pdf_path) as doc:
-                for page in doc:
-                    if isinstance(page, fitz.Page):
-                        full_text += page.get_text() # type: ignore
-        except Exception as e:
-            print(f"Fehler beim Öffnen oder Lesen der PDF-Datei: {e}")
-            return None
+    # Clean up any extra whitespace from the extracted names.
+    return [name.strip() for name in found_persons]
 
-    pattern = re.compile(r"\d+\.\s*a\) Firma:[\s\n]+([^\n]*)")
+    
+def extract_company_name(full_text: str) -> Optional[str]:
+    """
+    Extracts the company name from the text.
+
+    Args:
+        full_text: The text content of the Handelsregister excerpt.
+
+    Returns:
+        The company name as a string, or an empty string if not found.
+    """
+    # This improved regex looks for either "Firma:" or "Name:" and is not
+    # dependent on newlines or specific numbering, making it more robust.
+    pattern = re.compile(r"a\)\s*(?:Firma|Name):?\s*([^\n]+)")
     match = pattern.search(full_text)
+    return match.group(1).strip() if match else ""
 
+def extract_company_address(full_text: str) -> Optional[str]:
+    """
+    Extracts the company's business address from the text.
+
+    Args:
+        full_text: The text content of the Handelsregister excerpt.
+
+    Returns:
+        The company address as a string, or an empty string if not found.
+    """
+    # The primary pattern looks for the explicit "Geschäftsanschrift:" label.
+    # This is the most common format.
+    primary_pattern = re.compile(r"Geschäftsanschrift:\s*([^\n]+)")
+    match = primary_pattern.search(full_text)
     if match:
         return match.group(1).strip()
-    
-    return None
 
-def extract_company_address(pdf_path: str, _test_text: Optional[str] = None) -> Optional[str]:
-    full_text = ""
-    if _test_text:
-        full_text = _test_text
-    else:
-        try:
-            with fitz.open(pdf_path) as doc:
-                for page in doc:
-                    if isinstance(page, fitz.Page):
-                        full_text += page.get_text() # type: ignore
-        except Exception as e:
-            print(f"Fehler beim Öffnen oder Lesen der PDF-Datei: {e}")
-            return None
-    
-    pattern = re.compile(r"\d+\.\s*Geschäftsanschrift:[\s\n]+([^\n]*)")
-    match = pattern.search(full_text)
-
-    if match:
-        return match.group(1).strip()
-    
-    return None
+    # A fallback pattern for cases (like the Lübeck example) where the address
+    # appears on the line directly following the city, under the "Sitz" section.
+    fallback_pattern = re.compile(r"b\)\s*Sitz,[^\n]+\n[^\n]+\n\s*([^\n]+)")
+    match = fallback_pattern.search(full_text)
+    return match.group(1).strip() if match else ""

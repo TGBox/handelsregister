@@ -1,7 +1,7 @@
 # Selenium/Python powered stand-alone module to provide convenient programmatic access the bundesAPI WebSearch.
 import json
 import sys
-from hr.pyutil import extract_company_address, extract_company_name, extract_management_data
+from pyutil import extract_company_address, extract_company_data_from_pdf, extract_company_name, extract_management_data
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service as ChromeService
@@ -129,7 +129,7 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
         po (str): the post code of the city
     """
     # Save each entry into its own download folder.
-    dl_path = Path.joinpath(Path.cwd(), "download", s)
+    dl_path = Path.joinpath(Path.cwd(),"download", s)
     if not Path.is_dir(dl_path): # Creating the folder; but only if it does not exist yet.
         Path.mkdir(dl_path)
 
@@ -139,9 +139,10 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
     chrome_options.add_argument('--disable-gpu') # Manchmal nötig
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--window-size=1920,1080')
+    chrome_options.add_argument('--log-level=3') # Surpresses low level warnings.
     # Chrome options setup to ensure that we can download and that we know where the file will get downloaded to.
     chrome_options.add_experimental_option('prefs', {
-        'download.default_directory': dl_path,  
+        'download.default_directory': str(dl_path),  
         'download.prompt_for_download': False,
         'download.directory_upgrade': True,
         'safebrowsing.enabled': True,
@@ -315,9 +316,10 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
         # --- Nur wenn Dateien da sind, geht es hier weiter ---
         pdfFileName = downloaded_files[0]
         pdfFilePath = PurePath.joinpath(dl_path, pdfFileName)
-        managers = extract_management_data(str(pdfFilePath))
-        companyName = extract_company_name(str(pdfFilePath))
-        companyAddress = extract_company_address(str(pdfFilePath))
+        companyData = extract_company_data_from_pdf(str(pdfFilePath))
+        managers = companyData.ceos
+        companyName = companyData.name
+        companyAddress = companyData.address
 
         # Combine data into a Dictionary.
         ts_return_value = {

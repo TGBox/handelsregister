@@ -1,6 +1,7 @@
 # Selenium/Python powered stand-alone module to provide convenient programmatic access the bundesAPI WebSearch.
 import sys
-from hr.pyutil import extract_company_address, extract_company_name, extract_management_data
+import json
+from pyutil import extract_company_address, extract_company_data_from_pdf, extract_company_name, extract_management_data
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service as ChromeService
@@ -9,7 +10,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 import time
-from pathlib import Path,PurePath
+from pathlib import Path,PurePath, PureWindowsPath
 import argparse
 
 # ! Second adaptation of selenium_handelsregister.py - WIP
@@ -128,19 +129,21 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
         po (str): the post code of the city
     """
     # Save each entry into its own download folder.
-    dl_path = Path.joinpath(Path.cwd(), "download", s)
+    dl_path = Path.joinpath(Path.cwd(),"download", s)
+    print("DOWNLOADPATH = ", dl_path)
     if not Path.is_dir(dl_path): # Creating the folder; but only if it does not exist yet.
         Path.mkdir(dl_path)
 
     # Chrome Options.
     chrome_options = webdriver.ChromeOptions()
-    chrome_options.add_argument('--headless')  # Browser im Hintergrund ohne UI ausführen
+    #chrome_options.add_argument('--headless')  # Browser im Hintergrund ohne UI ausführen
     chrome_options.add_argument('--disable-gpu') # Manchmal nötig
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--window-size=1920,1080')
+    chrome_options.add_argument('--log-level=3') # Surpresses low level warnings.
     # Chrome options setup to ensure that we can download and that we know where the file will get downloaded to.
     chrome_options.add_experimental_option('prefs', {
-        'download.default_directory': dl_path,  
+        'download.default_directory': str(dl_path),  
         'download.prompt_for_download': False,
         'download.directory_upgrade': True,
         'safebrowsing.enabled': True,
@@ -339,9 +342,11 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
         print("Daten wurden heruntergeladen. Extrahieren der Geschäftsführer und Prokuristen wird gestartet...")
         pdfFileName = downloaded_files[0]
         pdfFilePath = PurePath.joinpath(dl_path, pdfFileName)
-        managers = extract_management_data(str(pdfFilePath))
-        companyName = extract_company_name(str(pdfFilePath))
-        companyAddress = extract_company_address(str(pdfFilePath))
+        print("Es wird versucht die Daten von " + str(pdfFilePath) + " zu laden...")
+        companyData = extract_company_data_from_pdf(str(pdfFilePath))
+        managers = companyData.ceos
+        companyName = companyData.name
+        companyAddress = companyData.address
 
         #todo: Hier muss dann noch die tatsächliche Interaktion mit den Daten eingebaut werden. Aktuell werden sie zu Testzwecken nur auf der Konsole ausgegeben.
         # Iteration over the resulting values to print them to console.
@@ -349,11 +354,18 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
             print("Gefundene Personen in dieser Liste:")
             for person in managers:
                 print(f"  - {person}")
+        else:
+            print("Keine Geschäftsführer konnten extrahiert werden!")
                     
         if companyName:            
             print("Name der Firma: " + companyName)
+        else:
+            print("Kein Name konnte extrahiert werden!")
+            
         if companyAddress:
             print("Addresse der Firma: " + companyAddress)
+        else:
+            print("Kein Addresse konnte extrahiert werden!")
             
         
 if __name__ == "__main__":
@@ -361,6 +373,7 @@ if __name__ == "__main__":
     print("Wurde gecalled mit folgenden Parametern:")
     args = parse_cli_arguments()
     print(args)
+    # Temporarily commented out to verify the correct data propagation without risking to cross the api threshold.
     fetch_and_download_from_bundes_api(
         args.schlagwoerter,
         args.schlagwortOptionen,
