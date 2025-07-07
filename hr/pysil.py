@@ -325,7 +325,7 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
         ts_return_value = {
             "managers": managers,
             "name": companyName,
-            "Address": companyAddress
+            "address": companyAddress
         }
         
         # Parse to JSON string and write directly to console.
