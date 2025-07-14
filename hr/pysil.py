@@ -276,29 +276,41 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
         wait = WebDriverWait(driver, 20) # Maximal 20 Sekunden warten
         
         try:
-            links = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, target_class_selector)))
-        except TimeoutException:
-            links = []
+            # Wir warten, bis der Body der Ergebnistabelle geladen ist.
+            results_tbody_id = "ergebnissForm:selectedSuchErgebnisFormTable_data"
+            wait.until(EC.presence_of_element_located((By.ID, results_tbody_id)))
 
-        link_id = None  # Ensure link_id is always defined
-        for i, link_element in enumerate(links):
-            try:
-                link_text = link_element.text
-                link_id = link_element.get_attribute("id")
+            # KORRIGIERTE ZEILE: Wir maskieren die Doppelpunkte in der ID mit '\\:'.
+            result_rows = driver.find_elements(By.CSS_SELECTOR, "#ergebnissForm\\:selectedSuchErgebnisFormTable_data > tr[data-ri]")
 
-                # We don't need the document overview, the newest publications or the corporate sponsors. We only really need the current status.
-                if (link_text != "DK") and (link_text != "VÖ") and (link_text != "UT") and (link_text != "SI") and (link_text != "CD") and (link_text != "HD"):
+            found_match = False
+            for row in result_rows:
+                try:
+                    # Extrahiere den Firmennamen und den Sitz mit präziseren Selektoren.
+                    row_company_name = row.find_element(By.CSS_SELECTOR, "span.marginLeft20").text.strip()
+                    row_company_location = row.find_element(By.CSS_SELECTOR, "td.sitzSuchErgebnisse span.verticalText").text.strip()
 
-                    # Stelle sicher, dass das Element klickbar ist
-                    if link_id is not None:
-                        wait.until(EC.element_to_be_clickable((By.ID, link_id)))
-                        link_element.click()
+                    # Vergleiche die extrahierten Daten mit den Suchparametern.
+                    name_matches = s.lower() in row_company_name.lower()
+                    # City ist optional, muss anders gehandelt werden.
+                    city_matches = (ci.lower() in row_company_location.lower()) if ci else True
 
-                    time.sleep(1)
+                    if name_matches and city_matches:
+                        found_match = True
+                        
+                        # Finde den 'AD'-Link.
+                        ad_link_selector = "a.dokumentList[onclick*='Global.Dokumentart.AD']"
+                        ad_link = row.find_element(By.CSS_SELECTOR, ad_link_selector)
+                        
+                        wait.until(EC.element_to_be_clickable(ad_link)).click()
+                        
+                        time.sleep(3) # Kurze Pause, damit der Download sicher startet
+                        break 
+                except Exception as e:
                     break
-                    
-            except Exception as e:
-                break
+
+        except Exception as e:
+            return
 
     finally:
         # ! Wenn die Zeile unter dieser nicht auskommentiert ist, dann muss der Browser manuell geschlossen werden.

@@ -289,44 +289,62 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
         wait = WebDriverWait(driver, 20) # Maximal 20 Sekunden warten
         
         try:
-            links = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, target_class_selector)))
+            # Wir warten, bis der Body der Ergebnistabelle geladen ist.
+            results_tbody_id = "ergebnissForm:selectedSuchErgebnisFormTable_data"
+            wait.until(EC.presence_of_element_located((By.ID, results_tbody_id)))
+            print("\n✅ Ergebnistabelle gefunden.")
+
+            # KORRIGIERTE ZEILE: Wir maskieren die Doppelpunkte in der ID mit '\\:'.
+            result_rows = driver.find_elements(By.CSS_SELECTOR, "#ergebnissForm\\:selectedSuchErgebnisFormTable_data > tr[data-ri]")
+            print(f"Es wurde(n) {len(result_rows)} Treffer gefunden.")
+
+            if not result_rows:
+                print("\n❌ Warnung: Die Tabelle ist leer, es konnten keine Trefferzeilen gefunden werden.")
+                return
+
+            found_match = False
+            for row in result_rows:
+                try:
+                    # Extrahiere den Firmennamen und den Sitz mit präziseren Selektoren.
+                    row_company_name = row.find_element(By.CSS_SELECTOR, "span.marginLeft20").text.strip()
+                    row_company_location = row.find_element(By.CSS_SELECTOR, "td.sitzSuchErgebnisse span.verticalText").text.strip()
+
+                    print(f"Prüfe Zeile: Name='{row_company_name}', Sitz='{row_company_location}'")
+
+                    # Vergleiche die extrahierten Daten mit den Suchparametern.
+                    name_matches = s.lower() in row_company_name.lower()
+                    # City ist optional, muss anders gehandelt werden.
+                    city_matches = (ci.lower() in row_company_location.lower()) if ci else True
+
+                    if name_matches and city_matches:
+                        print(f"✔️ Passende Zeile gefunden!")
+                        found_match = True
+                        
+                        # Finde den 'AD'-Link.
+                        ad_link_selector = "a.dokumentList[onclick*='Global.Dokumentart.AD']"
+                        ad_link = row.find_element(By.CSS_SELECTOR, ad_link_selector)
+                        
+                        print("Klicke 'AD'-Link zum Download...")
+                        wait.until(EC.element_to_be_clickable(ad_link)).click()
+                        
+                        time.sleep(3) # Kurze Pause, damit der Download sicher startet
+                        break 
+
+                except Exception as e:
+                    print(f"Fehler bei der Verarbeitung einer Zeile: {e}")
+                    continue
+
+            if not found_match:
+                print("\n❌ Es konnte keine Firma gefunden werden, die den Suchkriterien entspricht.")
+
         except TimeoutException:
-            print("Keine Links mit der Klasse gefunden oder nicht rechtzeitig geladen.")
-            links = []
-
-        print(f"Anzahl gefundener Links: {len(links)}")
-
-        link_id = None  # Ensure link_id is always defined
-        for i, link_element in enumerate(links):
-            try:
-                link_text = link_element.text
-                link_id = link_element.get_attribute("id")
-                print(f"Link {i+1}: Text='{link_text}', ID='{link_id}'")
-
-                # We don't need the document overview, the newest publications or the corporate sponsors. We only really need the current status.
-                if (link_text != "DK") and (link_text != "VÖ") and (link_text != "UT") and (link_text != "SI") and (link_text != "CD") and (link_text != "HD"):
-                    print(f"Versuche Link mit Text '{link_text}' und ID '{link_id}' zu klicken...")
-
-                    # Stelle sicher, dass das Element klickbar ist
-                    if link_id is not None:
-                        wait.until(EC.element_to_be_clickable((By.ID, link_id)))
-                        link_element.click()
-                        print("Link geklickt!")
-                    else:
-                        print("Warnung: link_id ist None, überspringe Klick.")
-
-                    time.sleep(1)
-                    break
-                    
-            except Exception as e:
-                print(f"Fehler beim Verarbeiten oder Klicken von Link {link_id if link_id is not None else ' unbekannt'}: {e}")
-
-    except Exception as e:
-        print(f"Ein genereller Fehler ist aufgetreten: {e}")
+            print("\n❌ Zeitüberschreitung: Die Ergebnistabelle wurde nicht rechtzeitig geladen. Gab es überhaupt Treffer?")
+        except Exception as e:
+            print(f"Ein genereller Fehler bei der Ergebnisverarbeitung ist aufgetreten: {e}")
 
     finally:
         # ! Wenn die Zeile unter dieser nicht auskommentiert ist, dann muss der Browser manuell geschlossen werden.
-        #input("Drücke Enter, um den Browser zu schließen...") # Zum Debuggen
+        input("Drücke Enter, um den Browser zu schließen...") # Zum Debuggen
         
         if 'driver' in locals():
             driver.quit()
@@ -339,19 +357,21 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
             return # Beendet die Funktion hier, da es nichts zu verarbeiten gibt
 
         # --- Nur wenn Dateien da sind, geht es hier weiter ---
-        print("Daten wurden heruntergeladen. Extrahieren der Geschäftsführer und Prokuristen wird gestartet...")
+        print("\nDaten wurden heruntergeladen. Extrahieren der Geschäftsführer und Prokuristen wird gestartet...")
         pdfFileName = downloaded_files[0]
         pdfFilePath = PurePath.joinpath(dl_path, pdfFileName)
-        print("Es wird versucht die Daten von " + str(pdfFilePath) + " zu laden...")
+        print("\nEs wird versucht die Daten von " + str(pdfFilePath) + " zu laden...")
         companyData = extract_company_data_from_pdf(str(pdfFilePath))
         managers = companyData.ceos
         companyName = companyData.name
         companyAddress = companyData.address
 
-        #todo: Hier muss dann noch die tatsächliche Interaktion mit den Daten eingebaut werden. Aktuell werden sie zu Testzwecken nur auf der Konsole ausgegeben.
+        # TODO: Hier muss dann noch die tatsächliche Interaktion mit den Daten eingebaut werden. Aktuell werden sie zu Testzwecken nur auf der Konsole ausgegeben.
+        # TODO: Die Namen müssen noch irgendwie in Vor- und Nachnamen getrennt werden. 
+        # FIX Aktuelle Implementation ist buggy weil sie einfach nur das letzte Element des Namens extrahieren. Dies wäre in unserem default Beispiel aber schon nicht mehr ausreichend. (Weiss, Fabian Klaus Otto => Nachname: Otto)
         # Iteration over the resulting values to print them to console.
         if managers:  # Only take lists that are non-empty.
-            print("Gefundene Personen in dieser Liste:")
+            print("\nGefundene Personen in dieser Liste:")
             for person in managers:
                 print(f"  - {person}")
         else:
@@ -369,7 +389,7 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
             
         
 if __name__ == "__main__":
-    print("PySel wird ausgeführt...")
+    print("\nPySel wird ausgeführt...")
     print("Wurde gecalled mit folgenden Parametern:")
     args = parse_cli_arguments()
     print(args)
