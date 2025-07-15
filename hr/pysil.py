@@ -1,7 +1,7 @@
 # Selenium/Python powered stand-alone module to provide convenient programmatic access the bundesAPI WebSearch.
 import json
 import sys
-from pyutil import extract_company_address, extract_company_data_from_pdf, extract_company_name, extract_management_data
+from pyutil import extract_company_data_from_pdf
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service as ChromeService
@@ -230,6 +230,7 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
         except TimeoutException:
             checkbox_container = ""
             
+    # TODO: Hier muss noch der tryblock von oben kopiert/adaptiert werden, um den parameter sg zu nutzen um gelöschte einträge auch finden zu können! 
 
 
     # Find text input for the post code and enter it.
@@ -271,8 +272,7 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
         except TimeoutException:
             subBtn = ""
         
-        # Es ist wichtig, auf die Sichtbarkeit/Klickbarkeit der Elemente zu warten,
-        # besonders bei dynamischen Webseiten.
+        # Es ist wichtig, auf die Sichtbarkeit/Klickbarkeit der Elemente zu warten, besonders bei dynamischen Webseiten.
         wait = WebDriverWait(driver, 20) # Maximal 20 Sekunden warten
         
         try:
@@ -280,7 +280,7 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
             results_tbody_id = "ergebnissForm:selectedSuchErgebnisFormTable_data"
             wait.until(EC.presence_of_element_located((By.ID, results_tbody_id)))
 
-            # KORRIGIERTE ZEILE: Wir maskieren die Doppelpunkte in der ID mit '\\:'.
+            # Auswahl der Reihen in denen sich die Daten befinden.
             result_rows = driver.find_elements(By.CSS_SELECTOR, "#ergebnissForm\\:selectedSuchErgebnisFormTable_data > tr[data-ri]")
 
             found_match = False
@@ -298,13 +298,13 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
                     if name_matches and city_matches:
                         found_match = True
                         
-                        # Finde den 'AD'-Link.
+                        # Finde den 'AD'-Link. (AD ==> Aktueller Abdruck)
                         ad_link_selector = "a.dokumentList[onclick*='Global.Dokumentart.AD']"
                         ad_link = row.find_element(By.CSS_SELECTOR, ad_link_selector)
                         
                         wait.until(EC.element_to_be_clickable(ad_link)).click()
                         
-                        time.sleep(3) # Kurze Pause, damit der Download sicher startet
+                        time.sleep(3) # Kurze Pause, damit der Download sicher startet.
                         break 
                 except Exception as e:
                     break
@@ -321,11 +321,12 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
         if Path("temp_page.html").exists():
             Path("temp_page.html").unlink()
             
+        # Beendet die Funktion hier, falls es nichts zu verarbeiten gibt.
         downloaded_files = list(Path(dl_path).iterdir())
         if not downloaded_files:
-            return # Beendet die Funktion hier, da es nichts zu verarbeiten gibt
+            return
 
-        # --- Nur wenn Dateien da sind, geht es hier weiter ---
+        # --- Nur wenn heruntergeladene Dateien da sind, geht es hier weiter ---
         pdfFileName = downloaded_files[0]
         pdfFilePath = PurePath.joinpath(dl_path, pdfFileName)
         companyData = extract_company_data_from_pdf(str(pdfFilePath))
@@ -343,8 +344,8 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
         # Parse to JSON string and write directly to console.
         json_output = json.dumps(ts_return_value)
         print(json_output)
-        sys.stdout.flush()        
-       
+        sys.stdout.flush()
+
 if __name__ == "__main__":
     args = parse_cli_arguments()
     fetch_and_download_from_bundes_api(

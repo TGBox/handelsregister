@@ -1,9 +1,10 @@
-# Adjusted methods to allow for easier tests!
+# Adjusted methods with added _test_text to allow for easier tests via data injection!
 
 from dataclasses import dataclass
 import re
 from typing import List, Optional
 import fitz
+from nameparser import HumanName
 
 @dataclass
 class CompanyPdfData:
@@ -93,7 +94,6 @@ def extract_management_data(full_text: str) -> List[str]:
     
     # Clean up any extra whitespace from the extracted names.
     return [name.strip() for name in found_persons]
-
     
 def extract_company_name(full_text: str) -> Optional[str]:
     """
@@ -128,8 +128,21 @@ def extract_company_address(full_text: str) -> Optional[str]:
     if match:
         return match.group(1).strip()
 
-    # A fallback pattern for cases (like the Lübeck example) where the address
+    # A fallback pattern for cases where the address
     # appears on the line directly following the city, under the "Sitz" section.
     fallback_pattern = re.compile(r"b\)\s*Sitz,[^\n]+\n[^\n]+\n\s*([^\n]+)")
     match = fallback_pattern.search(full_text)
     return match.group(1).strip() if match else ""
+
+def parse_string_name(full_name: str) -> HumanName:
+    """
+    Parses a string containing the full name of a person to a HumanName object where the individual parts can get accessed individually.
+
+    Args:
+        full_name: The string containing the full name of a person, including titles and with no clear structure.
+
+    Returns:
+        The HumanName object that was parsed from the input string.
+    """
+    name = HumanName(full_name)
+    return name

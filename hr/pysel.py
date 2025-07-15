@@ -366,9 +366,7 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
         companyName = companyData.name
         companyAddress = companyData.address
 
-        # TODO: Hier muss dann noch die tatsächliche Interaktion mit den Daten eingebaut werden. Aktuell werden sie zu Testzwecken nur auf der Konsole ausgegeben.
-        # TODO: Die Namen müssen noch irgendwie in Vor- und Nachnamen getrennt werden. 
-        # FIX Aktuelle Implementation ist buggy weil sie einfach nur das letzte Element des Namens extrahieren. Dies wäre in unserem default Beispiel aber schon nicht mehr ausreichend. (Weiss, Fabian Klaus Otto => Nachname: Otto)
+        # ! Tatsächliche Interaktion mit den Daten via CLI ist in Pysil implementiert!. Aktuell werden Daten in dieser Datei zu Testzwecken auf der Konsole ausgegeben.
         # Iteration over the resulting values to print them to console.
         if managers:  # Only take lists that are non-empty.
             print("\nGefundene Personen in dieser Liste:")

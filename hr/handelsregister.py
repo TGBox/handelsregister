@@ -5,6 +5,7 @@ You can query, download, automate and much more, without using a web browser.
 """
 
 import argparse
+from typing_extensions import deprecated
 import mechanize
 import re
 import pathlib
@@ -18,6 +19,7 @@ schlagwortOptionen = {
     "exact": 3
 }
 
+@deprecated("Don't use this outdated script! Use pysil.py (pysel.py) instead!\nWas only left as a reference!")
 class HandelsRegister:
     def __init__(self, args):
         self.args = args
@@ -67,7 +69,6 @@ class HandelsRegister:
                 html = f.read()
                 print("return cached content for %s" % self.args.schlagwoerter)
         else:
-            # TODO implement token bucket to abide by rate limit
             # Use an atomic counter: https://gist.github.com/benhoyt/8c8a8d62debe8e5aa5340373f9c509c7
             # line below is not needed anymore.
             #response_search = self.browser.follow_link(text="Advanced search")
@@ -95,9 +96,6 @@ class HandelsRegister:
                 print("Error: Form submission failed, no response received.")
                 html = ""
 
-            # TODO catch the situation if there's more than one company?
-            # !TODO get all documents attached to the exact company
-            # !TODO parse useful information out of the PDFs
         return get_companies_in_searchresults(html)
 
 def parse_result(result):
@@ -111,7 +109,7 @@ def parse_result(result):
     d['name'] = cells[2]
     d['state'] = cells[3]
     d['status'] = cells[4]
-    d['documents'] = cells[5] # todo: get the document links
+    d['documents'] = cells[5]
     d['history'] = []
     hist_start = 8
     hist_cnt = (len(cells)-hist_start)/3

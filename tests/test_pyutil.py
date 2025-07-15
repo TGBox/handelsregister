@@ -1,6 +1,7 @@
 # Adjusted to utilize the direct injection that was added to the functions!
 
 import pytest
+import unittest
 from hr import pyutil
 
 # ------------------- #
@@ -81,3 +82,103 @@ def test_extract_company_data_from_pdf_integration(mocker):
     assert result.name == "Testfirma GmbH"
     assert result.address == "Musterstraße 1"
     assert result.ceos == ["Max Mustermann"]
+
+# --- Tests for the parsing of name strings ---
+
+class TestNameParsing(unittest.TestCase):
+    
+    def test_most_common_name_formats(self):
+        """Testet die gängigsten Namensformate."""
+        
+        # Arrange.
+        names_to_test = [
+            "Stefan Müller",
+            "Schmidt, Maria",
+            "Prof. Dr. Anna-Lena von der Heide",
+            "Jan de Vries",
+            "Winter, Peter Otto"
+        ]
+        
+        # Act.
+        expected_results = [
+            {'firstName': 'Stefan', 'lastName': 'Müller', 'title': '', 'middle': ''},
+            {'firstName': 'Maria', 'lastName': 'Schmidt', 'title': '', 'middle': ''},
+            {'firstName': 'Anna-Lena', 'lastName': 'von der Heide', 'title': 'Prof. Dr.', 'middle': ''},
+            {'firstName': 'Jan', 'lastName': 'de Vries', 'title': '', 'middle': ''},
+            {'firstName': 'Peter', 'lastName': 'Winter', 'title': '', 'middle': 'Otto'},
+        ]
+        
+        real_results = []
+        for test_name in names_to_test:
+            name = pyutil.parse_string_name(test_name)
+            real_results.append({
+                'firstName': name.first,
+                'lastName': name.last,
+                'title': name.title,
+                'middle': name.middle
+            })
+        
+        # Assert.
+        self.assertEqual(expected_results, real_results)
+    
+    def test_more_obscure_name_formats(self):
+        """Testet ungewöhnlichere Namensformate."""
+        
+        # Arrange.
+        names_to_test = [
+            "Jens Stefan Hans-Jürgen Möller-Döhling",
+            "Dr. Phil Specter",
+            "Mike Hunt",
+            "Schlachter-Ohnewald, Sieglinde Berta Ruth",
+            "Dr. Eitelbert Hupfeld",
+            "Böttinger, Luitwin"
+        ]
+        
+        # Act.
+        expected_results = [
+            {'firstName': 'Jens', 'lastName': 'Möller-Döhling', 'title': '', 'middle': 'Stefan Hans-Jürgen'},
+            {'firstName': 'Phil', 'lastName': 'Specter', 'title': 'Dr.', 'middle': ''},
+            {'firstName': 'Mike', 'lastName': 'Hunt', 'title': '', 'middle': ''},
+            {'firstName': 'Sieglinde', 'lastName': 'Schlachter-Ohnewald', 'title': '', 'middle': 'Berta Ruth'},
+            {'firstName': 'Eitelbert', 'lastName': 'Hupfeld', 'title': 'Dr.', 'middle': ''},
+            {'firstName': 'Luitwin', 'lastName': 'Böttinger', 'title': '', 'middle': ''},
+        ]
+        
+        real_results = []
+        for test_name in names_to_test:
+            name = pyutil.parse_string_name(test_name)
+            real_results.append({
+                'firstName': name.first,
+                'lastName': name.last,
+                'title': name.title,
+                'middle': name.middle
+            })
+        
+        # Assert.
+        self.assertEqual(expected_results, real_results)
+        
+    def test_single_name(self):
+        """Testet wie ein einzelner Name ohne Leerzeichen verarbeitet wird."""
+        name = "Cher"
+        expected = {'firstName': 'Cher', 'lastName': '', 'title': '', 'middle': ''}
+        human_name = pyutil.parse_string_name(name)
+        actual = {
+            'firstName': human_name.first,
+            'lastName': human_name.last,
+            'title': human_name.title,
+            'middle': human_name.middle
+        }
+        self.assertEqual(actual, expected)
+        
+    def test_empty_string(self):
+        """Testet wie ein leerer String verarbeitet wird."""
+        name = ""
+        expected = {'firstName': '', 'lastName': '', 'title': '', 'middle': ''}
+        human_name = pyutil.parse_string_name(name)
+        actual = {
+            'firstName': human_name.first,
+            'lastName': human_name.last,
+            'title': human_name.title,
+            'middle': human_name.middle
+        }
+        self.assertEqual(actual, expected)
