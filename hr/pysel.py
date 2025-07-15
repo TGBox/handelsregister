@@ -224,20 +224,36 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
     # Find the checkbox for similar sounding search results getting fetched as well.
         wait = WebDriverWait(driver, 10)
         try:
-            checkbox_input = driver.find_element(By.ID, "form:aenlichLautendeSchlagwoerterBoolChkbox_input")
-            if checkbox_input.is_selected():
-                checkbox_container = wait.until(EC.element_to_be_clickable((By.ID, "form:aenlichLautendeSchlagwoerterBoolChkbox")))
+            similar_checkbox_input = driver.find_element(By.ID, "form:aenlichLautendeSchlagwoerterBoolChkbox_input")
+            if similar_checkbox_input.is_selected():
+                similar_checkbox_container = wait.until(EC.element_to_be_clickable((By.ID, "form:aenlichLautendeSchlagwoerterBoolChkbox")))
                 if (sa == False):
-                    checkbox_container.click()  # deselect already selected if we do not want to search for similar!
+                    similar_checkbox_container.click()  # deselect already selected if we do not want to search for similar!
             else:
-                checkbox_container = wait.until(EC.element_to_be_clickable((By.ID, "form:aenlichLautendeSchlagwoerterBoolChkbox")))
+                similar_checkbox_container = wait.until(EC.element_to_be_clickable((By.ID, "form:aenlichLautendeSchlagwoerterBoolChkbox")))
                 if (sa == True):
-                    checkbox_container.click() # select deselected if we want to search for similar!
+                    similar_checkbox_container.click() # select deselected if we want to search for similar!
             time.sleep(2)
         except TimeoutException:
             print("Es wurde nicht rechtzeitig eine klickbare Checkbox für die Auswahl zur Suche von ähnlich klingenden Einträgen gefunden.")
-            checkbox_container = ""
-            
+            similar_checkbox_container = ""
+
+    # Find the checkbox for already deleted entries getting fetched as well.
+        wait = WebDriverWait(driver, 10)
+        try:
+            deleted_checkbox_input = driver.find_element(By.ID, "form:auchGeloeschte_input")
+            if deleted_checkbox_input.is_selected():
+                deleted_checkbox_container = wait.until(EC.element_to_be_clickable((By.ID, "form:auchGeloeschte")))
+                if (sg == False):
+                    deleted_checkbox_container.click()  # deselect already selected if we do not want to search for deleted entries!
+            else:
+                deleted_checkbox_container = wait.until(EC.element_to_be_clickable((By.ID, "form:auchGeloeschte")))
+                if (sg == True):
+                    deleted_checkbox_container.click() # select deselected if we want to search for deleted entries!
+            time.sleep(2)
+        except TimeoutException:
+            print("Es wurde nicht rechtzeitig eine klickbare Checkbox für die Auswahl zur Suche von bereits gelöschten Einträgen gefunden.")
+            deleted_checkbox_container = ""
 
 
     # Find text input for the post code and enter it.

@@ -217,20 +217,34 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
     # Find the checkbox for similar sounding search results getting fetched as well.
         wait = WebDriverWait(driver, 10)
         try:
-            checkbox_input = driver.find_element(By.ID, "form:aenlichLautendeSchlagwoerterBoolChkbox_input")
-            if checkbox_input.is_selected():
-                checkbox_container = wait.until(EC.element_to_be_clickable((By.ID, "form:aenlichLautendeSchlagwoerterBoolChkbox")))
+            similar_checkbox_input = driver.find_element(By.ID, "form:aenlichLautendeSchlagwoerterBoolChkbox_input")
+            if similar_checkbox_input.is_selected():
+                similar_checkbox_container = wait.until(EC.element_to_be_clickable((By.ID, "form:aenlichLautendeSchlagwoerterBoolChkbox")))
                 if (sa == False):
-                    checkbox_container.click()  # deselect already selected if we do not want to search for similar!
+                    similar_checkbox_container.click()  # deselect already selected if we do not want to search for similar!
             else:
-                checkbox_container = wait.until(EC.element_to_be_clickable((By.ID, "form:aenlichLautendeSchlagwoerterBoolChkbox")))
+                similar_checkbox_container = wait.until(EC.element_to_be_clickable((By.ID, "form:aenlichLautendeSchlagwoerterBoolChkbox")))
                 if (sa == True):
-                    checkbox_container.click() # select deselected if we want to search for similar!
+                    similar_checkbox_container.click() # select deselected if we want to search for similar!
             time.sleep(2)
         except TimeoutException:
-            checkbox_container = ""
-            
-    # TODO: Hier muss noch der tryblock von oben kopiert/adaptiert werden, um den parameter sg zu nutzen um gelöschte einträge auch finden zu können! 
+            similar_checkbox_container = ""
+
+    # Find the checkbox for already deleted entries getting fetched as well.
+        wait = WebDriverWait(driver, 10)
+        try:
+            deleted_checkbox_input = driver.find_element(By.ID, "form:auchGeloeschte_input")
+            if deleted_checkbox_input.is_selected():
+                deleted_checkbox_container = wait.until(EC.element_to_be_clickable((By.ID, "form:auchGeloeschte")))
+                if (sg == False):
+                    deleted_checkbox_container.click()  # deselect already selected if we do not want to search for deleted entries!
+            else:
+                deleted_checkbox_container = wait.until(EC.element_to_be_clickable((By.ID, "form:auchGeloeschte")))
+                if (sg == True):
+                    deleted_checkbox_container.click() # select deselected if we want to search for deleted entries!
+            time.sleep(2)
+        except TimeoutException:
+            deleted_checkbox_container = ""
 
 
     # Find text input for the post code and enter it.
@@ -251,7 +265,7 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
         except TimeoutException:
             ort = ""
             
-    # Find text input for the street name and 
+    # Find text input for the street name and enter it.
         wait = WebDriverWait(driver, 10)
         try:
             strt = wait.until(EC.element_to_be_clickable((By.ID, street)))
@@ -260,7 +274,6 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
         except TimeoutException:
             strt = ""
         
-
         wait = WebDriverWait(driver, 10)
         try:
             # Wir warten nur noch darauf, dass das Element im DOM existiert (nicht zwingend klickbar ist)
@@ -275,6 +288,7 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
         # Es ist wichtig, auf die Sichtbarkeit/Klickbarkeit der Elemente zu warten, besonders bei dynamischen Webseiten.
         wait = WebDriverWait(driver, 20) # Maximal 20 Sekunden warten
         
+        # Angepasster Code um auch mit mehreren Suchergebnissen umgehen zu können. 
         try:
             # Wir warten, bis der Body der Ergebnistabelle geladen ist.
             results_tbody_id = "ergebnissForm:selectedSuchErgebnisFormTable_data"
