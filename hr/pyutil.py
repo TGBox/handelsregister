@@ -54,54 +54,57 @@ def extract_company_data_from_pdf(pdf_path: str, _test_text: Optional[str] = Non
 
 def extract_management_data(full_text: str) -> List[str]:
     """
-    Extrahiert die Namen der Geschäftsführer (Geschäftsführer, Partner usw.) aus dem Text.
-    Die Funktion verarbeitet mehrere Formate, einschließlich einzelner Einträge mit Geburtsdaten 
-    und mehrerer Einträge in einer einzigen Zeile ohne Geburtsdaten.
-
-    Args:
-        full_text: Der Textinhalt des Handelsregisterauszugs.
-
-    Returns:
-        Eine Liste mit den Namen des Führungspersonals.
+    Extrahiert die Namen der Geschäftsführer aus dem Text, indem es den entsprechenden
+    Abschnitt im Dokument isoliert und anschließend alle Personen mit Geburtsdatum findet.
+    Die Funktion kann verschiedene Formatierungen von Namen, Orten und Daten verarbeiten.
     """
-    all_managers = []
     
-    # Dieser Regex findet alle Zeilen, die mit Schlüsselwörtern wie "Geschäftsführer" 
-    # beginnen und erfasst den Rest der Zeile, der den/die Namen enthält.
-    line_pattern = re.compile(
-        r"^\s*(?:Geschäftsführer|Partner|Einzelvertretungsberechtigt):\s*(.*)", 
-        re.MULTILINE
+    # 1. Den Abschnitt mit den Geschäftsführer-Daten isolieren.
+    #    Dieser beginnt typischerweise mit "b) Vorstand..." und endet vor dem nächsten nummerierten Abschnitt.
+    section_pattern = re.compile(
+        r"b\)\s*(?:Vorstand, Leitungsorgan|Geschäftsführer, Vertretungsberechtigte)[\s\S]+?(?=\n\s*\d+\.\s*)",
+        re.DOTALL
     )
+    management_section_match = section_pattern.search(full_text)
     
-    content_lines = line_pattern.findall(full_text)
+    source_text = full_text
+    if management_section_match:
+        source_text = management_section_match.group(0)
+
+    # 2. Innerhalb des Textes alle Zeilen finden, die ein Geburtsdatum enthalten.
+    #    Das Format "*tt.mm.jjjj" ist ein sehr zuverlässiger Anker.
+    person_lines = re.findall(r"^\s*.*\*.*$", source_text, re.MULTILINE)
     
-    for line in content_lines:
-        line = line.strip()
+    if not person_lines:
+        return []
 
-        # Ignoriert leere Zeilen oder Platzhalter wie "-"
-        if not line or line == '-':
-            continue
+    all_managers = []
+    # Muster zum Entfernen von "Ort, *Datum"
+    junk_pattern_city_first = re.compile(r',\s*[^,]+,\s*\*\d{2}\.\d{2}\.\d{4}.*$', re.IGNORECASE)
+    # Muster zum Entfernen von "*Datum, Ort"
+    junk_pattern_date_first = re.compile(r',\s*\*\d{2}\.\d{2}\.\d{4}.*$', re.IGNORECASE)
+    # Muster zum Entfernen von Rollen-Präfixen wie "Geschäftsführer: "
+    prefix_pattern = re.compile(r"^\s*(?:Geschäftsführer|Liquidator|Vorstand|Partner|\d+\.\s+Vorstand):\s*", re.IGNORECASE)
 
-        # Fall 1: Die Zeile enthält ein Geburtsdatum (*tt.mm.jjjj), was auf eine Person hinweist.
-        if '*' in line:
-            # Entfernt den Ort und das Geburtsdatum, um den Namen zu isolieren.
-            # Der reguläre Ausdruck geht davon aus, dass der Name am Anfang steht.
-            name_part = re.sub(r',\s*[^,]+,\s*\*\d{2}\.\d{2}\.\d{4}.*$', '', line).strip()
-            all_managers.append(name_part)
-        # Fall 2: Die Zeile enthält kein Geburtsdatum; wahrscheinlich eine kommagetrennte Liste.
-        else:
-            # Teilt die Zeile nach Kommas auf. Erwartetes Format: "Nachname1, Vorname1, Nachname2, Vorname2..."
-            parts = [p.strip() for p in line.split(',') if p.strip()]
+    for line in person_lines:
+        cleaned_line = line.strip()
+        
+        # Zuerst ein mögliches Präfix (z.B. "Liquidator: ") entfernen.
+        cleaned_line = prefix_pattern.sub('', cleaned_line)
+        
+        # Nun versuchen, die restlichen Informationen (Ort, Datum) zu entfernen.
+        # Es wird zuerst das spezifischere Muster für "Name, Ort, *Datum" probiert.
+        temp_line = junk_pattern_city_first.sub('', cleaned_line)
+        
+        # Wenn sich nichts geändert hat, das Muster für "Name, *Datum, Ort" anwenden.
+        if temp_line == cleaned_line:
+            temp_line = junk_pattern_date_first.sub('', cleaned_line)
+        
+        final_name = temp_line.strip()
+        
+        if final_name:
+            all_managers.append(final_name)
             
-            # Prüft auf "Nachname, Vorname"-Paare (gerade Anzahl von Teilen).
-            if len(parts) > 1 and len(parts) % 2 == 0:
-                for i in range(0, len(parts), 2):
-                    full_name = f"{parts[i]}, {parts[i+1]}"
-                    all_managers.append(full_name)
-            elif len(parts) > 0:
-                # Wenn nicht in Paaren (z.B. ein einzelner Name), wird die ganze Zeile hinzugefügt.
-                all_managers.append(line)
-
     return all_managers
     
 def extract_company_name(full_text: str) -> Optional[str]:
