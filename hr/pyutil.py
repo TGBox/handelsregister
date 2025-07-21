@@ -54,46 +54,55 @@ def extract_company_data_from_pdf(pdf_path: str, _test_text: Optional[str] = Non
 
 def extract_management_data(full_text: str) -> List[str]:
     """
-    Extracts the names of managers (Geschäftsführer, Partner, etc.) from the text.
-
-    It first identifies the block of text containing management information and
-    then extracts each person's name from that block.
+    Extrahiert die Namen der Geschäftsführer (Geschäftsführer, Partner usw.) aus dem Text.
+    Die Funktion verarbeitet mehrere Formate, einschließlich einzelner Einträge mit Geburtsdaten 
+    und mehrerer Einträge in einer einzigen Zeile ohne Geburtsdaten.
 
     Args:
-        full_text: The text content of the Handelsregister excerpt.
+        full_text: Der Textinhalt des Handelsregisterauszugs.
 
     Returns:
-        A list of names of the management personnel.
+        Eine Liste mit den Namen des Führungspersonals.
     """
-    # This regex identifies the section listing the management personnel.
-    # It starts with keywords like "Vorstand" or "Partner" and ends before the next
-    # numbered section (e.g., "5. Prokura:", "4. a) Rechtsform:").
-    # This is more flexible than the original hardcoded pattern.
-    section_regex = re.compile(
-        r"b\)\s*(?:Vorstand, Leitungsorgan|Partner, Vertretungsberechtigte).*?(?=\n\s*\d\.\s)",
-        re.DOTALL
-    )
-    management_section = section_regex.search(full_text)
-
-    if not management_section:
-        return []
-
-    section_text = management_section.group(0)
-
-    # This regex finds all individual person entries within the management section.
-    # It looks for lines that contain a name followed by a date of birth (*dd.mm.yyyy),
-    # which is a reliable pattern for these entries.
-    # It correctly captures names even when they have titles or multiple first names.
-    # The 're.MULTILINE' flag allows '^' to match the start of each line.
-    person_regex = re.compile(
-        r"^\s*(?:(?:Einzelvertretungsberechtigt|Geschäftsführer|Partner):?)?\s*(.*?,\s*.*?),\s*.*?\s*\*\d{2}\.\d{2}\.\d{4}",
+    all_managers = []
+    
+    # Dieser Regex findet alle Zeilen, die mit Schlüsselwörtern wie "Geschäftsführer" 
+    # beginnen und erfasst den Rest der Zeile, der den/die Namen enthält.
+    line_pattern = re.compile(
+        r"^\s*(?:Geschäftsführer|Partner|Einzelvertretungsberechtigt):\s*(.*)", 
         re.MULTILINE
     )
     
-    found_persons = person_regex.findall(section_text)
+    content_lines = line_pattern.findall(full_text)
     
-    # Clean up any extra whitespace from the extracted names.
-    return [name.strip() for name in found_persons]
+    for line in content_lines:
+        line = line.strip()
+
+        # Ignoriert leere Zeilen oder Platzhalter wie "-"
+        if not line or line == '-':
+            continue
+
+        # Fall 1: Die Zeile enthält ein Geburtsdatum (*tt.mm.jjjj), was auf eine Person hinweist.
+        if '*' in line:
+            # Entfernt den Ort und das Geburtsdatum, um den Namen zu isolieren.
+            # Der reguläre Ausdruck geht davon aus, dass der Name am Anfang steht.
+            name_part = re.sub(r',\s*[^,]+,\s*\*\d{2}\.\d{2}\.\d{4}.*$', '', line).strip()
+            all_managers.append(name_part)
+        # Fall 2: Die Zeile enthält kein Geburtsdatum; wahrscheinlich eine kommagetrennte Liste.
+        else:
+            # Teilt die Zeile nach Kommas auf. Erwartetes Format: "Nachname1, Vorname1, Nachname2, Vorname2..."
+            parts = [p.strip() for p in line.split(',') if p.strip()]
+            
+            # Prüft auf "Nachname, Vorname"-Paare (gerade Anzahl von Teilen).
+            if len(parts) > 1 and len(parts) % 2 == 0:
+                for i in range(0, len(parts), 2):
+                    full_name = f"{parts[i]}, {parts[i+1]}"
+                    all_managers.append(full_name)
+            elif len(parts) > 0:
+                # Wenn nicht in Paaren (z.B. ein einzelner Name), wird die ganze Zeile hinzugefügt.
+                all_managers.append(line)
+
+    return all_managers
     
 def extract_company_name(full_text: str) -> Optional[str]:
     """

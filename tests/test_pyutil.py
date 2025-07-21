@@ -33,6 +33,31 @@ Einzelprokura: Prokurist, Peter
 6. a) Rechtsform, Beginn, Satzung oder Gesellschaftsvertrag
 Gesellschaft mit beschränkter Haftung
     """
+    
+@pytest.fixture
+def sample_pdf_text2() -> str:
+    """Eine Fixture, die einen weiteren realistischen, gemockten PDF-Text zurückgibt."""
+    return """
+Auszug aus dem Handelsregister
+----------------------------------
+1. a) Firma:
+Testfirma GmbH
+
+2. b) Sitz:
+Musterstadt
+
+3. Geschäftsanschrift:
+Musterstraße 1, 12345 Musterstadt
+
+4. b) Vorstand, Leitungsorgan, geschäftsführende Direktoren, persönlich haftender Gesellschafter
+Geschäftsführer: Mustermann, Max, Musterfrau, Erika
+
+5. Prokura:
+-
+
+6. a) Rechtsform, Beginn, Satzung oder Gesellschaftsvertrag
+Gesellschaft mit beschränkter Haftung
+    """
 
 @pytest.fixture
 def text_without_data() -> str:
@@ -67,6 +92,11 @@ def test_extract_company_address_success(sample_pdf_text):
 def test_extract_management_data(sample_pdf_text):
     """Testet, ob nur die Geschäftsführer korrekt extrahiert werden."""
     result = pyutil.extract_management_data(full_text=sample_pdf_text)
+    assert result == ["Mustermann, Max", "Musterfrau, Erika"]
+
+def test_extract_management_data2(sample_pdf_text2):
+    """Testet, ob die Geschäftsführer auch von einem anders formatierten Dokument korrekt extrahiert werden."""
+    result = pyutil.extract_management_data(full_text=sample_pdf_text2)
     assert result == ["Mustermann, Max", "Musterfrau, Erika"]
 
 # --- Test for main function ---
