@@ -1,7 +1,7 @@
 # Selenium/Python powered stand-alone module to provide convenient programmatic access the bundesAPI WebSearch.
 import json
 import sys
-from pyutil import extract_company_data_from_pdf
+from pyutil import create_company_folder_name, extract_company_data_from_pdf
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service as ChromeService
@@ -31,9 +31,6 @@ def parse_cli_arguments():
         add_help=True,
         epilog="Achtung! Maximal 60 Anfragen pro Stunde stellen!"
     )
-
-    # Adding help texts for our expected arguments. NOT NEEDED ANYMORE!
-    #parser.add_argument("searchTerms", nargs='+', help="Eine Liste von zu verarbeitenden Strings. 1. String ist der eigentliche Suchstring. 2. String zeigt an, welche Suchoptionen gewählt werden sollen. (all, exact oder min) 3. String ist der Name der Stadt. 4. String ist die Straße (und ggf. die Hausnummer). Der 5. String repräsentiert die Postleitzahl. Der 6. String entscheidet mit einem Boolean Wert, ob auch phonetisch ähnlich klingende Worte gesucht werden sollen. (Default false)")
 
     # Parsing the arguments from the command line.
     parser.add_argument(
@@ -116,7 +113,8 @@ def parse_cli_arguments():
     return args
 
 def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
-    """Function to fetch and download a specific data request/response from the handelsregister bundesAPI.
+    """
+    Function to fetch and download a specific data request/response from the handelsregister bundesAPI.
     Currently only decorative for checking on the way that the input gets passed along.
 
     Args:
@@ -128,15 +126,16 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
         st (str): the name of the street (and possibly the house number)
         po (str): the post code of the city
     """
+    
     # Save each entry into its own download folder.
-    dl_path = Path.joinpath(Path.cwd(),"download", s)
+    dl_path = Path.joinpath(Path.cwd(),"download", create_company_folder_name(s, ci, True))
     if not Path.is_dir(dl_path): # Creating the folder; but only if it does not exist yet.
         Path.mkdir(dl_path)
 
     # Chrome Options.
     chrome_options = webdriver.ChromeOptions()
-    chrome_options.add_argument('--headless')  # Browser im Hintergrund ohne UI ausführen
-    chrome_options.add_argument('--disable-gpu') # Manchmal nötig
+    chrome_options.add_argument('--headless')  # Run the browser without opening a visible window.
+    chrome_options.add_argument('--disable-gpu') # Sometimes needed.
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--window-size=1920,1080')
     chrome_options.add_argument('--log-level=3') # Surpresses low level warnings.
@@ -276,49 +275,47 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
         
         wait = WebDriverWait(driver, 10)
         try:
-            # Wir warten nur noch darauf, dass das Element im DOM existiert (nicht zwingend klickbar ist)
+            # Waiting for the button to get loaded into the DOM.
             subBtn = wait.until(EC.presence_of_element_located((By.ID, submitBtn)))
-            # Führe den Klick mit JavaScript aus
+            # Click on element via Javascript.
             driver.execute_script("arguments[0].click();", subBtn)
-            # Gib der Seite einen Moment Zeit, um die Ergebnisse zu laden
+            # Allow for additional waiting time to let the process finish.
             wait = WebDriverWait(driver, 10) 
         except TimeoutException:
             subBtn = ""
         
-        # Es ist wichtig, auf die Sichtbarkeit/Klickbarkeit der Elemente zu warten, besonders bei dynamischen Webseiten.
-        wait = WebDriverWait(driver, 20) # Maximal 20 Sekunden warten
+        wait = WebDriverWait(driver, 20) # Waiting max 20 seconds.
         
-        # Angepasster Code um auch mit mehreren Suchergebnissen umgehen zu können. 
         try:
-            # Wir warten, bis der Body der Ergebnistabelle geladen ist.
+            # Waiting till the result table was loaded as expected.
             results_tbody_id = "ergebnissForm:selectedSuchErgebnisFormTable_data"
             wait.until(EC.presence_of_element_located((By.ID, results_tbody_id)))
 
-            # Auswahl der Reihen in denen sich die Daten befinden.
+            # Selection of the rows that contain the desired results.
             result_rows = driver.find_elements(By.CSS_SELECTOR, "#ergebnissForm\\:selectedSuchErgebnisFormTable_data > tr[data-ri]")
 
             found_match = False
             for row in result_rows:
                 try:
-                    # Extrahiere den Firmennamen und den Sitz mit präziseren Selektoren.
+                    # Extracting the company name and its location via more advanced search parameters.
                     row_company_name = row.find_element(By.CSS_SELECTOR, "span.marginLeft20").text.strip()
                     row_company_location = row.find_element(By.CSS_SELECTOR, "td.sitzSuchErgebnisse span.verticalText").text.strip()
 
-                    # Vergleiche die extrahierten Daten mit den Suchparametern.
+                    # Comparing the previously available data with the fetched data from the downloaded documents. 
                     name_matches = s.lower() in row_company_name.lower()
-                    # City ist optional, muss anders gehandelt werden.
+                    # City is optional, but has to get handled differently.
                     city_matches = (ci.lower() in row_company_location.lower()) if ci else True
 
                     if name_matches and city_matches:
                         found_match = True
                         
-                        # Finde den 'AD'-Link. (AD ==> Aktueller Abdruck)
+                        # Locating the 'AD' link within. (AD ==> Aktueller Abdruck)
                         ad_link_selector = "a.dokumentList[onclick*='Global.Dokumentart.AD']"
                         ad_link = row.find_element(By.CSS_SELECTOR, ad_link_selector)
                         
                         wait.until(EC.element_to_be_clickable(ad_link)).click()
                         
-                        time.sleep(3) # Kurze Pause, damit der Download sicher startet.
+                        time.sleep(3) # Short pause to allow the download to finish.
                         break 
                 except Exception as e:
                     break
@@ -327,20 +324,20 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
             return
 
     finally:
-        # ! Wenn die Zeile unter dieser nicht auskommentiert ist, dann muss der Browser manuell geschlossen werden.
-        #input("Drücke Enter, um den Browser zu schließen...") # Zum Debuggen
+        # ! If the line below is not commented-out, the browser will only close itself after the user pressed enter.
+        #input("Drücke Enter, um den Browser zu schließen...") # For Debugging.
         
         if 'driver' in locals():
             driver.quit()
         if Path("temp_page.html").exists():
             Path("temp_page.html").unlink()
             
-        # Beendet die Funktion hier, falls es nichts zu verarbeiten gibt.
+        # End the function here when there is nothing more to process.
         downloaded_files = list(Path(dl_path).iterdir())
         if not downloaded_files:
             return
 
-        # --- Nur wenn heruntergeladene Dateien da sind, geht es hier weiter ---
+        # Only when files have been downloaded, we can continue here.
         pdfFileName = downloaded_files[0]
         pdfFilePath = PurePath.joinpath(dl_path, pdfFileName)
         companyData = extract_company_data_from_pdf(str(pdfFilePath))

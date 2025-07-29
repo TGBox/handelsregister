@@ -5,6 +5,7 @@ import re
 from typing import List, Optional
 import fitz
 from nameparser import HumanName
+import unicodedata
 
 @dataclass
 class CompanyPdfData:
@@ -20,10 +21,11 @@ def extract_company_data_from_pdf(pdf_path: str, _test_text: Optional[str] = Non
     management personnel (CEOs, partners, etc.) by calling specialized functions.
 
     Args:
-        pdf_path: The path to the PDF file that was downloaded from the Handelsregister BundesAPI.
+        pdf_path (str): The path to the PDF file that was downloaded from the Handelsregister BundesAPI.
+        _test_text (Optional[str]): Optional string test text parameter that is only used for testing the methods in this file more efficiently.
 
     Returns:
-        A CompanyPdfData object containing the extracted information.
+        CompanyPdfData: A CompanyPdfData object containing the extracted information.
     """
     full_text = ""
     if _test_text:
@@ -54,13 +56,18 @@ def extract_company_data_from_pdf(pdf_path: str, _test_text: Optional[str] = Non
 
 def extract_management_data(full_text: str) -> List[str]:
     """
-    Extrahiert die Namen der Geschäftsführer aus dem Text, indem es den entsprechenden
-    Abschnitt im Dokument isoliert und anschließend alle Personen mit Geburtsdatum findet.
-    Die Funktion kann verschiedene Formatierungen von Namen, Orten und Daten verarbeiten.
+    Function to extract the names of the ceos of a company from the provided text input parameter.
+    The text should have been extracted from the document that was downloaded after calling the Handelsregister BundesAPI.
+    Can process different format patterns of company data.
+    
+    Args:
+        full_text (str): The extracted text string from the document.
+    
+    Returns:
+        List[str]: A list containing all of the ceos that could get extracted from the document text.
     """
     
-    # 1. Den Abschnitt mit den Geschäftsführer-Daten isolieren.
-    #    Dieser beginnt typischerweise mit "b) Vorstand..." und endet vor dem nächsten nummerierten Abschnitt.
+    # 1. Isolating the part of the document that contains the ceo(s) of the company.
     section_pattern = re.compile(
         r"b\)\s*(?:Vorstand, Leitungsorgan|Geschäftsführer, Vertretungsberechtigte)[\s\S]+?(?=\n\s*\d+\.\s*)",
         re.DOTALL
@@ -71,32 +78,30 @@ def extract_management_data(full_text: str) -> List[str]:
     if management_section_match:
         source_text = management_section_match.group(0)
 
-    # 2. Innerhalb des Textes alle Zeilen finden, die ein Geburtsdatum enthalten.
-    #    Das Format "*tt.mm.jjjj" ist ein sehr zuverlässiger Anker.
+    # 2. Check for each line containing a birth date. (Critical indicator for personal information.)
     person_lines = re.findall(r"^\s*.*\*.*$", source_text, re.MULTILINE)
     
     if not person_lines:
         return []
 
     all_managers = []
-    # Muster zum Entfernen von "Ort, *Datum"
+    # Pattern to remove "location, *date".
     junk_pattern_city_first = re.compile(r',\s*[^,]+,\s*\*\d{2}\.\d{2}\.\d{4}.*$', re.IGNORECASE)
-    # Muster zum Entfernen von "*Datum, Ort"
+    # Pattern to remove "*date, location".
     junk_pattern_date_first = re.compile(r',\s*\*\d{2}\.\d{2}\.\d{4}.*$', re.IGNORECASE)
-    # Muster zum Entfernen von Rollen-Präfixen wie "Geschäftsführer: "
+    # Pattern for removing prefixes corresponding to the position within the company.
     prefix_pattern = re.compile(r"^\s*(?:Geschäftsführer|Liquidator|Vorstand|Partner|\d+\.\s+Vorstand):\s*", re.IGNORECASE)
 
     for line in person_lines:
         cleaned_line = line.strip()
         
-        # Zuerst ein mögliches Präfix (z.B. "Liquidator: ") entfernen.
+        # First we remove a possibly contained prefix.
         cleaned_line = prefix_pattern.sub('', cleaned_line)
         
-        # Nun versuchen, die restlichen Informationen (Ort, Datum) zu entfernen.
-        # Es wird zuerst das spezifischere Muster für "Name, Ort, *Datum" probiert.
+        # Trying to remove the remaining data (location, date). Starting with the date first pattern.
         temp_line = junk_pattern_city_first.sub('', cleaned_line)
         
-        # Wenn sich nichts geändert hat, das Muster für "Name, *Datum, Ort" anwenden.
+        # If nothing changed, we then try to remove the remaining data (location, date), starting with the location first pattern.
         if temp_line == cleaned_line:
             temp_line = junk_pattern_date_first.sub('', cleaned_line)
         
@@ -111,11 +116,11 @@ def extract_company_name(full_text: str) -> Optional[str]:
     """
     Extracts the company name from the text.
 
-    Args:
+    Args (str):
         full_text: The text content of the Handelsregister excerpt.
 
     Returns:
-        The company name as a string, or an empty string if not found.
+        Optional[str]: The company name as a string, or an empty string if not found.
     """
     # This improved regex looks for either "Firma:" or "Name:" and is not
     # dependent on newlines or specific numbering, making it more robust.
@@ -128,10 +133,10 @@ def extract_company_address(full_text: str) -> Optional[str]:
     Extracts the company's business address from the text.
 
     Args:
-        full_text: The text content of the Handelsregister excerpt.
+        full_text (str): The text content of the Handelsregister excerpt.
 
     Returns:
-        The company address as a string, or an empty string if not found.
+        Optional[str]: The company address as a string, or an empty string if not found.
     """
     # The primary pattern looks for the explicit "Geschäftsanschrift:" label.
     # This is the most common format.
@@ -151,10 +156,100 @@ def parse_string_name(full_name: str) -> HumanName:
     Parses a string containing the full name of a person to a HumanName object where the individual parts can get accessed individually.
 
     Args:
-        full_name: The string containing the full name of a person, including titles and with no clear structure.
+        full_name (str): The string containing the full name of a person, including titles and with no clear structure.
 
     Returns:
-        The HumanName object that was parsed from the input string.
+        HumanName: The HumanName object that was parsed from the input string.
     """
     name = HumanName(full_name)
     return name
+
+def create_company_folder_name(name: str, city: str, shorten: bool, max_length: int = 26) -> str:
+    """
+    Creates the name of the download folder, where the documents of the corresponding company gets saved to.
+    
+    Args:
+        name (str): The string name of the company.
+        city (str): The string city of the company.
+        shorten (bool): Boolean flag to indicate if the name should get sanitized and shortened.
+        max_length (int): Optional maximum length of the combined company folder name string. Only gets applied when the name should get shortened. Defaults to 26. 
+    
+    Returns:
+        str: The generated company folder name.
+    """
+    
+    n_len = 15
+    c_len = 10
+    
+    if shorten:
+        return crop_string_to_max_length(sanitize_string_for_folder_name(name), n_len) + "-" + crop_string_to_max_length(sanitize_string_for_folder_name(city), c_len)
+    
+    return name + "-" + city
+
+def remove_diacritical_marks(s: str) -> str:
+    """
+    Removes all diacritical marks from a given string.
+    
+    Args:
+        s (str): The string to get sanitized.
+    
+    Returns:
+        str: The string without any diacritical marks.
+    """
+    
+    # Normalize the string into NFD, which removes all of those special characters and replaces them with the base letter equivalent.
+    nfkd_form = unicodedata.normalize('NFD', s)
+    # Additionally filters out all remaining combining diacritics before returning the string.
+    return "".join([c for c in nfkd_form if not unicodedata.combining(c)])
+
+def sanitize_string_for_folder_name(s: str) -> str:
+    """
+    Sanitizes a given string to get a simplified version of it, without special characters or empty spaces.
+    
+    Args:
+        s (str): The string that needs to get sanitized.
+    
+    Returns:
+        str: The sanitized string that can be used for creating a company folder name.
+    """
+    
+    # Sanitation map containing german special characters and their base letter replacements.
+    sanitation_map = {
+        'ä': 'ae',
+        'ö': 'oe',
+        'ü': 'ue',
+        'ß': 'ss'
+    }
+    
+    # Trim extra spaces from the start and end of the string and replace all commata.
+    sanitized = s.strip().replace(",", "")
+
+    # Convert to lowercase and replace all remaining spaces with dashes.
+    sanitized = sanitized.lower().replace(" ", "-")
+
+    # Replace german special characters via the sanitation map.
+    for char, replacement in sanitation_map.items():
+        sanitized = sanitized.replace(char, replacement)
+
+    # Remove other diacritical marks.
+    sanitized = remove_diacritical_marks(sanitized)
+
+    return sanitized
+
+def crop_string_to_max_length(s: str, max: int) -> str:
+    """
+    Function that takes a string and a maximum length value and ensures that the returned strings length does not exceed the specified threshold.
+    If the string is shorter than the threshold, it gets returned as is. Otherwise the substring until the threshold index will get returned instead.
+
+    Args:
+        s (str): The string that needs to get cropped to ensure its length does not exceed the specified threshold.
+        max (int): The maximum length that the returned string is allowed to have.
+
+    Returns:
+        str: The (possibly) cropped string.
+    """
+    
+    if len(s) <= max:
+        return s
+
+    return s[0:max]

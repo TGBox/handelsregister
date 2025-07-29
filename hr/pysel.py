@@ -1,7 +1,6 @@
 # Selenium/Python powered stand-alone module to provide convenient programmatic access the bundesAPI WebSearch.
 import sys
-import json
-from pyutil import extract_company_address, extract_company_data_from_pdf, extract_company_name, extract_management_data
+from pyutil import extract_company_data_from_pdf
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service as ChromeService
@@ -10,7 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 import time
-from pathlib import Path,PurePath, PureWindowsPath
+from pathlib import Path,PurePath
 import argparse
 
 # ! Second adaptation of selenium_handelsregister.py - WIP
@@ -136,8 +135,8 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
 
     # Chrome Options.
     chrome_options = webdriver.ChromeOptions()
-    #chrome_options.add_argument('--headless')  # Browser im Hintergrund ohne UI ausführen
-    chrome_options.add_argument('--disable-gpu') # Manchmal nötig
+    #chrome_options.add_argument('--headless')  # Run the browser without opening a visible window.
+    chrome_options.add_argument('--disable-gpu') # Sometimes needed.
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--window-size=1920,1080')
     chrome_options.add_argument('--log-level=3') # Surpresses low level warnings.
@@ -289,28 +288,26 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
 
         wait = WebDriverWait(driver, 10)
         try:
-            # Wir warten nur noch darauf, dass das Element im DOM existiert (nicht zwingend klickbar ist)
+            # Waiting for the button to get loaded into the DOM.
             subBtn = wait.until(EC.presence_of_element_located((By.ID, submitBtn)))
-            # Führe den Klick mit JavaScript aus
+            # Click on element via Javascript.
             driver.execute_script("arguments[0].click();", subBtn)
             print("Suche-Button wurde via JavaScript geklickt.")
-            # Gib der Seite einen Moment Zeit, um die Ergebnisse zu laden
+            # Allow for additional waiting time to let the process finish.
             wait = WebDriverWait(driver, 10) 
         except TimeoutException:
             print("Es wurde nicht rechtzeitig ein Submitbutton gefunden.")
             subBtn = ""
         
-        # Es ist wichtig, auf die Sichtbarkeit/Klickbarkeit der Elemente zu warten,
-        # besonders bei dynamischen Webseiten.
-        wait = WebDriverWait(driver, 20) # Maximal 20 Sekunden warten
+        wait = WebDriverWait(driver, 20) # Waiting max 20 seconds.
         
         try:
-            # Wir warten, bis der Body der Ergebnistabelle geladen ist.
+            # Waiting till the result table was loaded as expected.
             results_tbody_id = "ergebnissForm:selectedSuchErgebnisFormTable_data"
             wait.until(EC.presence_of_element_located((By.ID, results_tbody_id)))
             print("\n✅ Ergebnistabelle gefunden.")
 
-            # KORRIGIERTE ZEILE: Wir maskieren die Doppelpunkte in der ID mit '\\:'.
+            # Selection of the rows that contain the desired results.
             result_rows = driver.find_elements(By.CSS_SELECTOR, "#ergebnissForm\\:selectedSuchErgebnisFormTable_data > tr[data-ri]")
             print(f"Es wurde(n) {len(result_rows)} Treffer gefunden.")
 
@@ -321,29 +318,29 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
             found_match = False
             for row in result_rows:
                 try:
-                    # Extrahiere den Firmennamen und den Sitz mit präziseren Selektoren.
+                    # Extracting the company name and its location via more advanced search parameters.
                     row_company_name = row.find_element(By.CSS_SELECTOR, "span.marginLeft20").text.strip()
                     row_company_location = row.find_element(By.CSS_SELECTOR, "td.sitzSuchErgebnisse span.verticalText").text.strip()
 
                     print(f"Prüfe Zeile: Name='{row_company_name}', Sitz='{row_company_location}'")
 
-                    # Vergleiche die extrahierten Daten mit den Suchparametern.
+                    # Comparing the previously available data with the fetched data from the downloaded documents. 
                     name_matches = s.lower() in row_company_name.lower()
-                    # City ist optional, muss anders gehandelt werden.
+                    # City is optional, but has to get handled differently.
                     city_matches = (ci.lower() in row_company_location.lower()) if ci else True
 
                     if name_matches and city_matches:
                         print(f"✔️ Passende Zeile gefunden!")
                         found_match = True
                         
-                        # Finde den 'AD'-Link.
+                        # Locating the 'AD' link within. (AD ==> Aktueller Abdruck)
                         ad_link_selector = "a.dokumentList[onclick*='Global.Dokumentart.AD']"
                         ad_link = row.find_element(By.CSS_SELECTOR, ad_link_selector)
                         
                         print("Klicke 'AD'-Link zum Download...")
                         wait.until(EC.element_to_be_clickable(ad_link)).click()
                         
-                        time.sleep(3) # Kurze Pause, damit der Download sicher startet
+                        time.sleep(3) # Short pause to allow the download to finish.
                         break 
 
                 except Exception as e:
@@ -359,8 +356,8 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
             print(f"Ein genereller Fehler bei der Ergebnisverarbeitung ist aufgetreten: {e}")
 
     finally:
-        # ! Wenn die Zeile unter dieser nicht auskommentiert ist, dann muss der Browser manuell geschlossen werden.
-        input("Drücke Enter, um den Browser zu schließen...") # Zum Debuggen
+        # ! If the line below is not commented-out, the browser will only close itself after the user pressed enter.
+        input("Drücke Enter, um den Browser zu schließen...") # For Debugging.
         
         if 'driver' in locals():
             driver.quit()
@@ -370,9 +367,9 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
         downloaded_files = list(Path(dl_path).iterdir())
         if not downloaded_files:
             print(f"Fehler: Download fehlgeschlagen. Keine Datei im Verzeichnis '{dl_path}' gefunden.")
-            return # Beendet die Funktion hier, da es nichts zu verarbeiten gibt
+            return # End the function here if nothing was found.
 
-        # --- Nur wenn Dateien da sind, geht es hier weiter ---
+        # Continue here if data was found.
         print("\nDaten wurden heruntergeladen. Extrahieren der Geschäftsführer und Prokuristen wird gestartet...")
         pdfFileName = downloaded_files[0]
         pdfFilePath = PurePath.joinpath(dl_path, pdfFileName)
@@ -382,7 +379,7 @@ def fetch_and_download_from_bundes_api(s, so, sa, sg, ci, st, po):
         companyName = companyData.name
         companyAddress = companyData.address
 
-        # ! Tatsächliche Interaktion mit den Daten via CLI ist in Pysil implementiert!. Aktuell werden Daten in dieser Datei zu Testzwecken auf der Konsole ausgegeben.
+        # ! The currently used implementation can be found in pysil.py. This has been modified to only log data verbose to the console.
         # Iteration over the resulting values to print them to console.
         if managers:  # Only take lists that are non-empty.
             print("\nGefundene Personen in dieser Liste:")
@@ -407,7 +404,6 @@ if __name__ == "__main__":
     print("Wurde gecalled mit folgenden Parametern:")
     args = parse_cli_arguments()
     print(args)
-    # Temporarily commented out to verify the correct data propagation without risking to cross the api threshold.
     fetch_and_download_from_bundes_api(
         args.schlagwoerter,
         args.schlagwortOptionen,
