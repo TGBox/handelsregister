@@ -68,46 +68,58 @@ def extract_management_data(full_text: str) -> List[str]:
     """
     
     # 1. Isolating the part of the document that contains the ceo(s) of the company.
+    # The pattern now uses a capturing group to get ONLY the lines with manager data,
+    # excluding the section header itself.
     section_pattern = re.compile(
-        r"b\)\s*(?:Vorstand, Leitungsorgan|Geschäftsführer, Vertretungsberechtigte)[\s\S]+?(?=\n\s*\d+\.\s*)",
-        re.DOTALL
+        # Group 1: Match the header line (non-capturing)
+        r"(?:b\)\s*(?:Vorstand, Leitungsorgan|Geschäftsführer|persönlich haften|Vertretungsberechtigte)[\s\S]*?\n)"
+        # Group 2: Capture the actual manager data lines that follow the header
+        r"([\s\S]+?)"
+        # Stop before the next numbered section
+        r"(?=\n\s*\d+\.\s*)",
+        re.DOTALL | re.IGNORECASE
     )
     management_section_match = section_pattern.search(full_text)
     
-    source_text = full_text
-    if management_section_match:
-        source_text = management_section_match.group(0)
-
-    # 2. Check for each line containing a birth date. (Critical indicator for personal information.)
-    person_lines = re.findall(r"^\s*.*\*.*$", source_text, re.MULTILINE)
-    
-    if not person_lines:
+    # If no match or the capturing group for the data is empty, return.
+    if not management_section_match or not management_section_match.group(1):
         return []
+    
+    # source_text now contains ONLY the relevant lines with manager names.
+    source_text = management_section_match.group(1)
 
     all_managers = []
-    # Pattern to remove "location, *date".
+    
+    # Patterns for cleaning the extracted lines
     junk_pattern_city_first = re.compile(r',\s*[^,]+,\s*\*\d{2}\.\d{2}\.\d{4}.*$', re.IGNORECASE)
-    # Pattern to remove "*date, location".
     junk_pattern_date_first = re.compile(r',\s*\*\d{2}\.\d{2}\.\d{4}.*$', re.IGNORECASE)
-    # Pattern for removing prefixes corresponding to the position within the company.
-    prefix_pattern = re.compile(r"^\s*(?:Geschäftsführer|Liquidator|Vorstand|Partner|\d+\.\s+Vorstand):\s*", re.IGNORECASE)
+    prefix_pattern = re.compile(r"^\s*(?:Geschäftsführer|Liquidator|Vorstand|Partner|persönlich hafte.* Gesellschafter):\s*", re.IGNORECASE)
 
-    for line in person_lines:
-        cleaned_line = line.strip()
+    # 2. Iterate through the now clean list of lines.
+    for line in source_text.splitlines():
+        name_part = prefix_pattern.sub('', line.strip())
         
-        # First we remove a possibly contained prefix.
-        cleaned_line = prefix_pattern.sub('', cleaned_line)
+        if not name_part or ',' not in name_part:
+            continue
+            
+        final_name = ""
         
-        # Trying to remove the remaining data (location, date). Starting with the date first pattern.
-        temp_line = junk_pattern_city_first.sub('', cleaned_line)
+        # Case A: The line contains a birth date (*DD.MM.YYYY).
+        if '*' in name_part:
+            temp_line = junk_pattern_city_first.sub('', name_part)
+            if temp_line == name_part:
+                temp_line = junk_pattern_date_first.sub('', name_part)
+            final_name = temp_line.strip()
         
-        # If nothing changed, we then try to remove the remaining data (location, date), starting with the location first pattern.
-        if temp_line == cleaned_line:
-            temp_line = junk_pattern_date_first.sub('', cleaned_line)
-        
-        final_name = temp_line.strip()
-        
-        if final_name:
+        # Case B: The line does not contain a birth date.
+        else:
+            parts = name_part.split(',')
+            if len(parts) >= 2:
+                name_candidate = f"{parts[0].strip()}, {parts[1].strip()}"
+                if len(name_candidate) > 4 and " " in name_candidate:
+                    final_name = name_candidate
+
+        if final_name and final_name not in all_managers:
             all_managers.append(final_name)
             
     return all_managers
@@ -164,15 +176,15 @@ def parse_string_name(full_name: str) -> HumanName:
     name = HumanName(full_name)
     return name
 
-def create_company_folder_name(name: str, city: str, shorten: bool, max_length: int = 26) -> str:
+def create_company_folder_name(name: str, city: str, shorten: bool) -> str:
     """
     Creates the name of the download folder, where the documents of the corresponding company gets saved to.
+    If the name should get shortened, then the company name may get up to 15 characters long, and the city name may get up to 10 characters long.
     
     Args:
         name (str): The string name of the company.
         city (str): The string city of the company.
         shorten (bool): Boolean flag to indicate if the name should get sanitized and shortened.
-        max_length (int): Optional maximum length of the combined company folder name string. Only gets applied when the name should get shortened. Defaults to 26. 
     
     Returns:
         str: The generated company folder name.
@@ -221,8 +233,11 @@ def sanitize_string_for_folder_name(s: str) -> str:
         'ß': 'ss'
     }
     
-    # Trim extra spaces from the start and end of the string and replace all commata.
+    # Trim extra spaces from the start and end of the string, replace all "´" and replace all commas.
     sanitized = s.strip().replace(",", "")
+    sanitized = sanitized.replace("´", "")
+    sanitized = sanitized.replace(" - ", "-")
+    sanitized = sanitized.replace(" & ", "&")
 
     # Convert to lowercase and replace all remaining spaces with dashes.
     sanitized = sanitized.lower().replace(" ", "-")

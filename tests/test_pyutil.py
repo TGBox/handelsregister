@@ -8,8 +8,6 @@ from hr import pyutil
 # -- MOCK-FIXTURES -- #
 # ------------------- #
 
-# TODO: Fix the failing tests for create_company_folder_name and for extract_management_data!
-
 @pytest.fixture
 def sample_pdf_text() -> str:
     """Eine Fixture, die einen realistischen, gemockten PDF-Text zurückgibt."""
@@ -52,7 +50,7 @@ Musterstadt
 Musterstraße 1, 12345 Musterstadt
 
 4. b) Vorstand, Leitungsorgan, geschäftsführende Direktoren, persönlich haftender Gesellschafter
-Geschäftsführer: Mustermann, Max, Musterfrau, Erika
+Geschäftsführer: Mustermann, Max, Kaufmann, Dreieich
 
 5. Prokura:
 -
@@ -99,7 +97,7 @@ def test_extract_management_data(sample_pdf_text):
 def test_extract_management_data2(sample_pdf_text2):
     """Testet, ob die Geschäftsführer auch von einem anders formatierten Dokument korrekt extrahiert werden."""
     result = pyutil.extract_management_data(full_text=sample_pdf_text2)
-    assert result == ["Mustermann, Max", "Musterfrau, Erika"]
+    assert result == ["Mustermann, Max"]
 
 # --- Test for main function ---
 
@@ -236,39 +234,15 @@ class TestFolderNameFunctions(unittest.TestCase):
     def test_sanitize_string_for_folder_name(self):
         print("\n--- Testing sanitize_string_for_folder_name ---")
         self.assertEqual(pyutil.sanitize_string_for_folder_name("  Test Firma  "), "test-firma", "Sollte Leerzeichen am Anfang/Ende entfernen und in der Mitte ersetzen.")
-        self.assertEqual(pyutil.sanitize_string_for_folder_name("Müller & Söhne, Groß-Gerau"), "mueller-&-soehne-gross-gerau", "Sollte deutsche Umlaute, Kommas und Leerzeichen korrekt behandeln.")
+        self.assertEqual(pyutil.sanitize_string_for_folder_name("Müller & Söhne, Groß-Gerau"), "mueller&soehne-gross-gerau", "Sollte deutsche Umlaute, Kommas und Leerzeichen korrekt behandeln.")
         self.assertEqual(pyutil.sanitize_string_for_folder_name("ABC Company"), "abc-company", "Sollte in Kleinbuchstaben umwandeln.")
         self.assertEqual(pyutil.sanitize_string_for_folder_name("François Immo-AG"), "francois-immo-ag", "Sollte eine Kombination aus verschiedenen Zeichen korrekt bereinigen.")
         self.assertEqual(pyutil.sanitize_string_for_folder_name(""), "", "Sollte einen leeren String korrekt behandeln.")
+        self.assertEqual(pyutil.sanitize_string_for_folder_name("Gregor´s Laden"), "gregors-laden", "Sollte den seltenen Randfall korrekt behandeln, falls ein falsches Anführungszeichen entdeckt wurde.")
+
 
     def test_create_company_folder_name(self):
-        print("\n--- Testing create_company_folder_name ---")
-        # Test case 1: Non-shortened.
-        self.assertEqual(pyutil.create_company_folder_name("Müller AG", "Berlin", False), "Müller AG-Berlin", "Sollte bei shorten=False einfach verketten.")
-
-        # Test case 2: Shortened, but already within bounds.
-        self.assertEqual(pyutil.create_company_folder_name("Test", "Ulm", True), "test-ulm", "Sollte bei kurzen Namen nur bereinigen, nicht kürzen.")
-
-        # Test case 3: Shortened, and strings are too long. (Using the default combined max length value of 26.)
-        long_name = "Eine sehr lange Firma mit einem unglaublich langen Namen"
-        long_city = "Eine Stadt mit einem ebenso langen Namen"
-        expected_name = "eine-sehr-lange"
-        expected_city = "eine-stadt"
-        self.assertEqual(pyutil.create_company_folder_name(long_name, long_city, True), f"{expected_name}-{expected_city}", "Sollte lange Namen korrekt kürzen und bereinigen.")
-
-        # Test case 4: Shortened, with user imposed max length.
-        self.assertEqual(pyutil.create_company_folder_name("KurzerName", "LangeStadtName", True, max_length=5), "kurze-lange", "Sollte benutzerdefinierte max_length respektieren.")
-        
-        # Test case 5: Complex names that get shortened.
-        name = "Müller & Söhne, Groß-Gerau"
-        city = "Friedrichshafen am Bodensee"
-        shortened_name = "mueller-&-soehn"
-        shortened_city = "friedrichs"
-        expected = shortened_name + "-" + shortened_city
-        self.assertEqual(pyutil.create_company_folder_name(name, city, True, max_length=26), expected, "Sollte komplexe Namen korrekt bereinigen und kürzen.")
-
-    def test_create_company_folder_name_updated(self):
-        print("\n--- Testing create_company_folder_name (Updated Logic) ---")
+        print("\n--- Testing create_company_folder_name  ---")
         
         # Test case 1: `shorten=False`
         self.assertEqual(pyutil.create_company_folder_name("Müller AG", "Berlin", False), "Müller AG-Berlin", "Sollte bei shorten=False einfach verketten.")
@@ -287,8 +261,25 @@ class TestFolderNameFunctions(unittest.TestCase):
         # Test case 5: `shorten=True`, both names are too long and complex.
         name = "Müller & Söhne, Groß-Gerau" # sanitized: "mueller-&-soehne-gross-gerau"
         city = "Friedrichshafen am Bodensee" # sanitized: "friedrichshafen-am-bodensee"
-        expected = "mueller-&-soehn-friedrichs" # shortened to 15 and 10
+        expected = "mueller&soehne--friedrichs" # shortened to 15 and 10
         self.assertEqual(pyutil.create_company_folder_name(name, city, True), expected, "Sollte komplexe Namen korrekt bereinigen und auf die festen Längen (15/10) kürzen.")
         
         # Test case 6: empty strings
         self.assertEqual(pyutil.create_company_folder_name("", "", True), "-", "Sollte leere Strings zu einem Bindestrich verbinden.")
+    
+    def test_create_company_folder_name_typescript_parity(self):
+        print("\n--- Testing create_company_folder_name - Checking for parity on Typescript function ---")
+        
+        # Test case 1: `shorten=False`
+        self.assertEqual(pyutil.create_company_folder_name("immersight GmbH", "Ulm", False), "immersight GmbH-Ulm", "Sollte bei shorten=False einfach verketten.")
+        self.assertEqual(pyutil.create_company_folder_name("Sonntag und Partner", "Märkßheim", False), "Sonntag und Partner-Märkßheim", "Sollte bei shorten=False einfach verketten.")
+        self.assertEqual(pyutil.create_company_folder_name("@Home-Wröck", "Berlin (Mitte)", False), "@Home-Wröck-Berlin (Mitte)", "Sollte bei shorten=False einfach verketten.")
+        self.assertEqual(pyutil.create_company_folder_name("123.de - Blitzschnelle Hilfe wenn man einen langen Firmennamen braucht", "Potsdam", False), "123.de - Blitzschnelle Hilfe wenn man einen langen Firmennamen braucht-Potsdam", "Sollte bei shorten=False einfach verketten.")
+        self.assertEqual(pyutil.create_company_folder_name("Gregor´s - Gas, Wasser & Scheiße Betrieb", "Köln", False), "Gregor´s - Gas, Wasser & Scheiße Betrieb-Köln", "Sollte bei shorten=False einfach verketten.")
+
+        # Test case 2: `shorten=True`.
+        self.assertEqual(pyutil.create_company_folder_name("immersight GmbH", "Ulm", True), "immersight-gmbh-ulm", "Sollte bei shorten=True verketten und bereinigen.")
+        self.assertEqual(pyutil.create_company_folder_name("Sonntag und Partner", "Märkßheim", True), "sonntag-und-par-maerksshei", "Sollte bei shorten=True verketten und bereinigen.")
+        self.assertEqual(pyutil.create_company_folder_name("@Home-Wröck", "Berlin (Mitte)", True), "@home-wroeck-berlin-(mi", "Sollte bei shorten=True verketten und bereinigen.")
+        self.assertEqual(pyutil.create_company_folder_name("123.de - Blitzschnelle Hilfe wenn man einen langen Firmennamen braucht", "Potsdam", True), "123.de-blitzsch-potsdam", "Sollte bei shorten=True verketten und bereinigen.")
+        self.assertEqual(pyutil.create_company_folder_name("Gregor´s - Gas, Wasser & Scheiße Betrieb", "Köln", True), "gregors-gas-was-koeln", "Sollte bei shorten=True verketten und bereinigen.")

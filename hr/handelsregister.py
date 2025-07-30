@@ -19,7 +19,7 @@ schlagwortOptionen = {
     "exact": 3
 }
 
-@deprecated("Don't use this outdated script! Use pysil.py (pysel.py) instead!\nWas only left as a reference!")
+@deprecated("\nDon't use this outdated script!\nUse pysil.py (pysel.py) instead!\nThis file was only left as a reference!")
 class HandelsRegister:
     def __init__(self, args):
         self.args = args
