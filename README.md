@@ -13,15 +13,15 @@ Die Einsichtnahme in das Handelsregister sowie in die dort eingereichten Dokumen
 
 ### Datenstruktur
 
-***URL:*** [Handelsregister Webportal](https://www.handelsregister.de/rp_web/erweitertesuche.xhtml)
+**_URL:_** [Handelsregister Webportal](https://www.handelsregister.de/rp_web/erweitertesuche.xhtml)
 
 Das gemeinsame Registerportal der Länder ermöglicht jeder und jedem die Recherche nach einzelnen Firmen zu Informationszwecken.</br>Einträge lassen sich dabei über verschiedene Parameter im Body eines POST-request filtern:
 
-**Parameter:** *schlagwoerter*  (Optional)
+**Parameter:** _schlagwoerter_ (Optional)
 
-Schlagwörter (z.B. Test). Zulässige Platzhalterzeichen sind für die Suche nach genauen Firmennamen</br>(siehe Parameter *schlagwortOptionen*) \* und ? - wobei das Sternchen für beliebig viele (auch kein) Zeichen steht,</br>das Fragezeichen hingegen für genau ein Zeichen.
+Schlagwörter (z.B. Test). Zulässige Platzhalterzeichen sind für die Suche nach genauen Firmennamen</br>(siehe Parameter _schlagwortOptionen_) \* und ? - wobei das Sternchen für beliebig viele (auch kein) Zeichen steht,</br>das Fragezeichen hingegen für genau ein Zeichen.
 
-**Parameter:** *schlagwortOptionen*  (Optional)
+**Parameter:** _schlagwortOptionen_ (Optional)
 
 - 1
 - 2
@@ -29,38 +29,38 @@ Schlagwörter (z.B. Test). Zulässige Platzhalterzeichen sind für die Suche nac
 
 Schlagwortoptionen: 1=alle Schlagwörter enthalten; 2=mindestens ein Schlagwort enthalten; 3=den genauen Firmennamen enthalten.
 
-**Parameter:** *suchOptionenAehnlich*  (Optional)
+**Parameter:** _suchOptionenAehnlich_ (Optional)
 
 - true
 
 true=ähnlich lautende Schlagwörter enthalten.</br>Unter der Ähnlichkeitssuche ist die sogenannte phonetische Suche zu verstehen.</br>Hierbei handelt es sich um ein Verfahren, welches Zeichenketten und ähnlich ausgesprochene Worte als identisch erkennt.</br>Grundlage für die Vergleichsoperation ist hier die insbesondere im Bereich der öffentlichen Verwaltung angewandte sogenannte Kölner Phonetik.
 
-**Parameter:** *suchOptionenGeloescht*  (Optional)
+**Parameter:** _suchOptionenGeloescht_ (Optional)
 
 - true
 
 true=auch gelöschte Formen finden.
 
-**Parameter:** *suchOptionenNurZNneuenRechts*  (Optional)
+**Parameter:** _suchOptionenNurZNneuenRechts_ (Optional)
 
 - true
 
 true=nur nach Zweigniederlassungen neuen Rechts suchen.
 
-**Parameter:** *btnSuche*  (Optional)
+**Parameter:** _btnSuche_ (Optional)
 
 - Suchen
 
 Button "Suchen"
 
-**Parameter:** *suchTyp*  (Optional)
+**Parameter:** _suchTyp_ (Optional)
 
 - n
 - e
 
 Suchtyp: n=normal; e=extended.</br>Die normale Suche erlaubt eine Suche über den gesamten Registerdatenbestand der Länder anhand einer überschaubaren Anzahl von Suchkriterien.</br>Die erweiterte Suche bietet neben den Auswahlkriterien der normalen Suche die selektive Suche in den Datenbeständen ausgewählter Länder,</br>die Suche nach Rechtsformen und die Suche nach Adressen an.
 
-**Parameter:** *ergebnisseProSeite*  (Optional)
+**Parameter:** _ergebnisseProSeite_ (Optional)
 
 - 10
 - 25
@@ -69,107 +69,107 @@ Suchtyp: n=normal; e=extended.</br>Die normale Suche erlaubt eine Suche über de
 
 Ergebnisse pro Seite.
 
-**Parameter:** *niederlassung*  (Optional)
+**Parameter:** _niederlassung_ (Optional)
 
 Niederlassung / Sitz.</br>Zulässige Platzhalterzeichen sind \* und ? - wobei das Sternchen für beliebig viele (auch kein) Zeichen steht,</br>das Fragezeichen hingegen für genau ein Zeichen.
 
-**Parameter:** *bundeslandBW*  (Optional)
+**Parameter:** _bundeslandBW_ (Optional)
 
 - on
 
 Einträge aus Baden-Württemberg
 
-**Parameter:** *bundeslandBY*  (Optional)
+**Parameter:** _bundeslandBY_ (Optional)
 
 - on
 
 Einträge aus Bayern
 
-**Parameter:** *bundeslandBE*  (Optional)
+**Parameter:** _bundeslandBE_ (Optional)
 
 - on
 
 Einträge aus Berlin
 
-**Parameter:** *bundeslandBR*  (Optional)
+**Parameter:** _bundeslandBR_ (Optional)
 
 - on
 
 Einträge aus Bradenburg
 
-**Parameter:** *bundeslandHB*  (Optional)
+**Parameter:** _bundeslandHB_ (Optional)
 
 - on
 
 Einträge aus Bremen
 
-**Parameter:** *bundeslandHH*  (Optional)
+**Parameter:** _bundeslandHH_ (Optional)
 
 - on
 
 Einträge aus Hamburg
 
-**Parameter:** *bundeslandHE*  (Optional)
+**Parameter:** _bundeslandHE_ (Optional)
 
 - on
 
 Einträge aus Hessen
 
-**Parameter:** *bundeslandMV*  (Optional)
+**Parameter:** _bundeslandMV_ (Optional)
 
 - on
 
 Einträge aus Mecklenburg-Vorpommern
 
-**Parameter:** *bundeslandNI*  (Optional)
+**Parameter:** _bundeslandNI_ (Optional)
 
 - on
 
 Einträge aus Niedersachsen
 
-**Parameter:** *bundeslandNW*  (Optional)
+**Parameter:** _bundeslandNW_ (Optional)
 
 - on
 
 Einträge aus Nordrhein-Westfalen
 
-**Parameter:** *bundeslandRP*  (Optional)
+**Parameter:** _bundeslandRP_ (Optional)
 
 - on
 
 Einträge aus Rheinland-Pfalz
 
-**Parameter:** *bundeslandSL*  (Optional)
+**Parameter:** _bundeslandSL_ (Optional)
 
 - on
 
 Einträge aus Saarland
 
-**Parameter:** *bundeslandSN*  (Optional)
+**Parameter:** _bundeslandSN_ (Optional)
 
 - on
 
 Einträge aus Sachsen
 
-**Parameter:** *bundeslandST*  (Optional)
+**Parameter:** _bundeslandST_ (Optional)
 
 - on
 
 Einträge aus Sachsen-Anhalt
 
-**Parameter:** *bundeslandSH*  (Optional)
+**Parameter:** _bundeslandSH_ (Optional)
 
 - on
 
 Einträge aus Schleswig-Holstein
 
-**Parameter:** *bundeslandTH*  (Optional)
+**Parameter:** _bundeslandTH_ (Optional)
 
 - on
 
 Einträge aus Thüringen
 
-**Parameter:** *registerArt*  (Optional)
+**Parameter:** _registerArt_ (Optional)
 
 - alle
 - HRA
@@ -180,15 +180,15 @@ Einträge aus Thüringen
 
 Registerart (Angaben nur zur Hauptniederlassung): alle; HRA; HRB; GnR; PR; VR.
 
-**Parameter:** *registerNummer*  (Optional)
+**Parameter:** _registerNummer_ (Optional)
 
 Registernummer (Angaben nur zur Hauptniederlassung).
 
-**Parameter:** *registerGericht*  (Optional)
+**Parameter:** _registerGericht_ (Optional)
 
 Registergericht (Angaben nur zur Hauptniederlassung). Beispielsweise D3201 für Ansbach
 
-**Parameter:** *rechtsform*  (Optional)
+**Parameter:** _rechtsform_ (Optional)
 
 - 1
 - 2
@@ -220,19 +220,19 @@ Registergericht (Angaben nur zur Hauptniederlassung). Beispielsweise D3201 für 
 
 Rechtsform (Angaben nur zur Hauptniederlassung).</br>1=Aktiengesellschaft; 2=eingetragene Genossenschaft; 3=eingetragener Verein;</br>4=Einzelkauffrau; 5=Einzelkaufmann; 6=Europäische Aktiengesellschaft (SE);</br>7=Europäische wirtschaftliche Interessenvereinigung; 8=Gesellschaft mit beschränkter Haftung; 9=HRA Juristische Person;</br>10=Kommanditgesellschaft; 12=Offene Handelsgesellschaft; 13=Partnerschaft; 14=Rechtsform ausländischen Rechts GnR;</br>15=Rechtsform ausländischen Rechts HRA; 16=Rechtsform ausländischen Rechts HRb; 17=Rechtsform ausländischen Rechts PR;</br>18=Seerechtliche Gesellschaft; 19=Versicherungsverein auf Gegenseitigkeit; 40=Anstalt öffentlichen Rechts;</br>46=Bergrechtliche Gesellschaft; 48=Körperschaft öffentlichen Rechts; 49= Europäische Genossenschaft (SCE);</br>51=Stiftung privaten Rechts; 52=Stiftung öffentlichen Rechts; 53=HRA sonstige Rechtsformen;</br>54=Sonstige juristische Person; 55=Einzelkaufmann/Einzelkauffrau
 
-**Parameter:** *postleitzahl*  (Optional)
+**Parameter:** _postleitzahl_ (Optional)
 
 Postleitzahl (Angaben nur zur Hauptniederlassung). Beispielsweise 90537 für Feucht.</br>Zulässige Platzhalterzeichen sind \* und ? - wobei das Sternchen für beliebig viele (auch kein) Zeichen steht,</br>das Fragezeichen hingegen für genau ein Zeichen.
 
-**Parameter:** *ort*  (Optional)
+**Parameter:** _ort_ (Optional)
 
 Ort (Angaben nur zur Hauptniederlassung). Beispielsweise Feucht.</br>Zulässige Platzhalterzeichen sind \* und ? - wobei das Sternchen für beliebig viele (auch kein) Zeichen steht,</br>das Fragezeichen hingegen für genau ein Zeichen.
 
-**Parameter:** *strasse*  (Optional)
+**Parameter:** _strasse_ (Optional)
 
 Straße (Angaben nur zur Hauptniederlassung). Beispielsweise Teststraße 2.</br>Zulässige Platzhalterzeichen sind \* und ? - wobei das Sternchen für beliebig viele (auch kein) Zeichen steht,</br>das Fragezeichen hingegen für genau ein Zeichen.
 
-______________
+---
 
 ### Installation with poetry
 
@@ -253,7 +253,7 @@ poetry run python -m pytest
 
 ### Command-line Interface
 
-> Das CLI ist momentan noch *WIP*.
+> Das CLI ist momentan noch _WIP_.
 
 ```bash
 usage: handelsregister.py [-h] [-d] [-f] -s SCHLAGWOERTER [-so {all,min,exact}]

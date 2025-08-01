@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "handelsregister"
-version = "1.0.0"
+version = "1.0.1"
 description = "Adapted fork of the BundesAPI Handelsregister repo with additional methods for usage in mailVerify."
 authors = ["BundesAPI <kontakt@bund.dev>", "Daniel Rösch <daniel.roesch91@gmail.com>"]
 readme = "README.md"
